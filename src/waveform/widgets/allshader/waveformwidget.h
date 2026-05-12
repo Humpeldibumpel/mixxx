@@ -73,6 +73,6 @@ class allshader::WaveformWidget final : public ::WGLWidget,
     WaveformRendererSignalBase* m_pWaveformRendererSignal;
 
     rendergraph::OpacityNode* m_pDownBeatOpacityNode;
-    float m_downBeatOpacity = 0.0f;
+    float m_downBeatOpacity = 1.0f;
     DISALLOW_COPY_AND_ASSIGN(WaveformWidget);
 };
