@@ -1,3 +1,16 @@
+> ### 🎛️ You are on a custom build branch
+>
+> This branch (`custom-build/downbeats-2.7`) is an **unofficial** Mixxx
+> build with visible downbeat markers on the waveform, derived from
+> [alephlm's PR #14835](https://github.com/mixxxdj/mixxx/pull/14835).
+>
+> **See [CUSTOM-BUILD.md](CUSTOM-BUILD.md) for what it is, what's
+> different, how to build it, and credits.**
+>
+> The rest of this README is the upstream Mixxx README, unchanged.
+
+---
+
 # Mixxx
 
 [![GitHub latest tag](https://img.shields.io/github/tag/mixxxdj/mixxx.svg)](https://mixxx.org/download)
