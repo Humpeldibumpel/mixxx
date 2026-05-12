@@ -283,6 +283,11 @@ BpmControl::BpmControl(const QString& group,
             this,
             &BpmControl::slotBackwardDownBeatsMarker,
             Qt::DirectConnection);
+
+    m_pToggleDownbeatsMarker = std::make_unique<ControlPushButton>(
+            ConfigKey(group, "toggle_downbeats_marker"), true);
+    m_pToggleDownbeatsMarker->setButtonMode(mixxx::control::ButtonMode::Toggle);
+    m_pToggleDownbeatsMarker->set(1.0);
 }
 
 mixxx::Bpm BpmControl::getBpm() const {

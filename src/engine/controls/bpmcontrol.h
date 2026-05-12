@@ -168,6 +168,7 @@ class BpmControl : public EngineControl {
 
     std::unique_ptr<ControlPushButton> m_pBeatsForwardDownBeatsMarker;
     std::unique_ptr<ControlPushButton> m_pBeatsBackwardDownBeatsMarker;
+    std::unique_ptr<ControlPushButton> m_pToggleDownbeatsMarker;
 
     // The current effective BPM of the engine
     std::unique_ptr<ControlLinPotmeter> m_pEngineBpm;
