@@ -14,12 +14,18 @@ WaveformRenderMarkBase::WaveformRenderMarkBase(
 void WaveformRenderMarkBase::setup(const QDomNode& node, const SkinContext& context) {
     WaveformSignalColors signalColors = *m_waveformRenderer->getWaveformSignalColors();
     m_marks.setup(m_waveformRenderer->getGroup(), node, context, signalColors);
-}
-
-bool WaveformRenderMarkBase::init() {
+    // Connections must happen after m_marks.setup(), because init() runs
+    // before setup() in the widget construction and m_marks is empty there.
+    // Loop start/end positions are CO-driven (not Cue-driven), so we cannot
+    // rely on Track::cuesUpdated alone (see upstream commits 1adf980e/831aff08
+    // for hotcue updates via Cue::updated(), and e5d207c8 which restored the
+    // overview connection — this is the equivalent fix for the live waveform).
     m_marks.connectSamplePositionChanged(this, &WaveformRenderMarkBase::onMarkChanged);
     m_marks.connectSampleEndPositionChanged(this, &WaveformRenderMarkBase::onMarkChanged);
     m_marks.connectVisibleChanged(this, &WaveformRenderMarkBase::onMarkChanged);
+}
+
+bool WaveformRenderMarkBase::init() {
     return true;
 }
 
