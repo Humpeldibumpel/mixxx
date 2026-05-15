@@ -31,6 +31,26 @@ namespace {
 // Horizontal and vertical margin around the widget where we accept play pos dragging.
 constexpr int kDragOutsideLimitX = 100;
 constexpr int kDragOutsideLimitY = 50;
+
+// Alternate vertical alignment for odd-numbered hotcues so adjacent
+// hotcue labels in the overview don't overlap horizontally. Hotcue 1
+// (internal index 0) keeps the configured align; hotcue 2 (index 1)
+// flips top<->bottom; etc. Non-hotcue marks and AlignVCenter are kept
+// as-is.
+Qt::Alignment effectiveValign(const WaveformMarkPointer& pMark) {
+    Qt::Alignment valign = pMark->m_align & Qt::AlignVertical_Mask;
+    int hotCue = pMark->getHotCue();
+    if (hotCue < 0 || (hotCue % 2) == 0) {
+        return valign;
+    }
+    if (valign == Qt::AlignTop) {
+        return Qt::AlignBottom;
+    }
+    if (valign == Qt::AlignBottom) {
+        return Qt::AlignTop;
+    }
+    return valign;
+}
 } // anonymous namespace
 
 WOverview::WOverview(
@@ -1012,7 +1032,7 @@ void WOverview::drawMarks(QPainter* pPainter, const float offset, const float ga
 
         if (!pMark->m_text.isEmpty()) {
             Qt::Alignment halign = pMark->m_align & Qt::AlignHorizontal_Mask;
-            Qt::Alignment valign = pMark->m_align & Qt::AlignVertical_Mask;
+            Qt::Alignment valign = effectiveValign(pMark);
 
             QString text = pMark->m_text;
 
@@ -1026,7 +1046,7 @@ void WOverview::drawMarks(QPainter* pPainter, const float offset, const float ga
                 for (auto m = std::next(it); m != m_marks.cend(); ++m) {
                     const WaveformMarkPointer& otherMark = *m;
                     bool otherAtSameHeight =
-                            valign == (otherMark->m_align & Qt::AlignVertical_Mask);
+                            valign == effectiveValign(otherMark);
                     // Hotcues always show at least their number.
                     bool otherHasLabel = !otherMark->m_text.isEmpty() ||
                             otherMark->getHotCue() != Cue::kNoHotCue;
@@ -1110,7 +1130,7 @@ void WOverview::drawMarks(QPainter* pPainter, const float offset, const float ga
         // so if the label is on bottom draw the position text on top and
         // vice versa.
         if (pMark == m_pHoveredMark) {
-            Qt::Alignment valign = pMark->m_align & Qt::AlignVertical_Mask;
+            Qt::Alignment valign = effectiveValign(pMark);
             QPointF positionTextPoint(markPosition + 1.5, 0);
             if (valign == Qt::AlignTop) {
                 positionTextPoint.setY(float(height()) - 0.5f);
