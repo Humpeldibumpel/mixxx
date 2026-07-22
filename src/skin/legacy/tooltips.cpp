@@ -427,6 +427,14 @@ void Tooltips::addStandardTooltips() {
             << QString("%1: %2").arg(leftClick, tempoTapButton)
             << QString("%1: %2").arg(rightClick, bpmTapButton);
 
+    add("bpm_tap_meter")
+            << tr("BPM Tap Meter")
+            << tr("Tap along to measure a BPM without changing the track or rate. "
+                  "Result is shown in the BPM display above.");
+    add("bpm_tap_meter_value")
+            << tr("BPM Tap Meter Value")
+            << tr("Shows the BPM measured from the last taps of the TAP button.");
+
     add("beats_adjust_slower")
             << tr("Adjust BPM Down")
             << tr("When tapped, adjusts the average BPM down by a small amount.");

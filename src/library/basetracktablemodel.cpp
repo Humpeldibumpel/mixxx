@@ -14,6 +14,7 @@
 #include "library/tabledelegates/colordelegate.h"
 #include "library/tabledelegates/coverartdelegate.h"
 #include "library/tabledelegates/defaultdelegate.h"
+#include "library/tabledelegates/hotcuedelegate.h"
 #include "library/tabledelegates/keydelegate.h"
 #include "library/tabledelegates/locationdelegate.h"
 #include "library/tabledelegates/multilineeditdelegate.h"
@@ -271,6 +272,18 @@ void BaseTrackTableModel::initHeaderProperties() {
             tr("Rating"),
             defaultColumnWidth() * 2);
     setHeaderProperties(
+            ColumnCache::COLUMN_LIBRARYTABLE_DANCEABILITY,
+            tr("Tanz"),
+            defaultColumnWidth() * 2);
+    setHeaderProperties(
+            ColumnCache::COLUMN_LIBRARYTABLE_JOY,
+            tr("Freude"),
+            defaultColumnWidth() * 2);
+    setHeaderProperties(
+            ColumnCache::COLUMN_LIBRARYTABLE_HOTCUE,
+            tr("Hot Cue"),
+            defaultColumnWidth() * 4);
+    setHeaderProperties(
             ColumnCache::COLUMN_LIBRARYTABLE_REPLAYGAIN,
             tr("ReplayGain"),
             defaultColumnWidth() * 2);
@@ -516,6 +529,8 @@ QAbstractItemDelegate* BaseTrackTableModel::delegateForColumn(
         return new MultiLineEditDelegate(pTableView);
     } else if (index == fieldIndex(ColumnCache::COLUMN_TRACKLOCATIONSTABLE_LOCATION)) {
         return new LocationDelegate(pTableView);
+    } else if (index == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_HOTCUE)) {
+        return new HotcueDelegate(pTableView);
     } else if (index == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COLOR)) {
         return new ColorDelegate(pTableView);
     } else if (index == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COVERART)) {
@@ -1102,6 +1117,7 @@ Qt::ItemFlags BaseTrackTableModel::readWriteFlags(
     if (column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_BITRATE) ||
             column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_CHANNELS) ||
             column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COLOR) ||
+            column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_HOTCUE) ||
             column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COVERART) ||
             column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_DATETIMEADDED) ||
             column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_LAST_PLAYED_AT) ||

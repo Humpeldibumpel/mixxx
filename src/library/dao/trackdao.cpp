@@ -454,6 +454,8 @@ void TrackDAO::addTracksPrepare() {
             "comment,"
             "url,"
             "rating,"
+            "danceability,"
+            "joy,"
             "key,"
             "key_id,"
             "cuepoint,"
@@ -502,6 +504,8 @@ void TrackDAO::addTracksPrepare() {
             ":comment,"
             ":url,"
             ":rating,"
+            ":danceability,"
+            ":joy,"
             ":key,"
             ":key_id,"
             ":cuepoint,"
@@ -606,6 +610,8 @@ void bindTrackLibraryValues(
     pTrackLibraryQuery->bindValue(":comment", trackInfo.getComment());
     pTrackLibraryQuery->bindValue(":url", track.getUrl());
     pTrackLibraryQuery->bindValue(":rating", track.getRating());
+    pTrackLibraryQuery->bindValue(":danceability", track.getDanceability());
+    pTrackLibraryQuery->bindValue(":joy", track.getJoy());
     pTrackLibraryQuery->bindValue(":cuepoint",
             track.getMainCuePosition().toEngineSamplePosMaybeInvalid());
     pTrackLibraryQuery->bindValue(":bpm_lock", track.getBpmLocked() ? 1 : 0);
@@ -1210,6 +1216,14 @@ void setTrackRating(const QSqlRecord& record, const int column, Track* pTrack) {
     pTrack->setRating(record.value(column).toInt());
 }
 
+void setTrackDanceability(const QSqlRecord& record, const int column, Track* pTrack) {
+    pTrack->setDanceability(record.value(column).toString());
+}
+
+void setTrackJoy(const QSqlRecord& record, const int column, Track* pTrack) {
+    pTrack->setJoy(record.value(column).toString());
+}
+
 void setTrackCuePoint(const QSqlRecord& record, const int column, Track* pTrack) {
     pTrack->setMainCuePosition(mixxx::audio::FramePos::fromEngineSamplePosMaybeInvalid(
             record.value(column).toDouble()));
@@ -1396,6 +1410,8 @@ TrackPointer TrackDAO::getTrackById(TrackId trackId) const {
             {"tracktotal", setTrackTotal},
             {"filetype", setTrackFiletype},
             {"rating", setTrackRating},
+            {"danceability", setTrackDanceability},
+            {"joy", setTrackJoy},
             {"color", setTrackColor},
             {"comment", setTrackComment},
             {"url", setTrackUrl},
@@ -1708,6 +1724,8 @@ bool TrackDAO::updateTrack(const Track& track) const {
             "comment=:comment,"
             "url=:url,"
             "rating=:rating,"
+            "danceability=:danceability,"
+            "joy=:joy,"
             "key=:key,"
             "key_id=:key_id,"
             "cuepoint=:cuepoint,"

@@ -68,6 +68,7 @@ BpmControl::BpmControl(const QString& group,
           m_pSyncMode(group, QStringLiteral("sync_mode")),
           m_bpmTapFilter(this, kBpmTapFilterLength, kBpmTapMaxInterval),
           m_tempoTapFilter(this, kBpmTapFilterLength, kBpmTapMaxInterval),
+          m_meterTapFilter(this, kBpmTapFilterLength, kBpmTapMaxInterval),
           m_dSyncInstantaneousBpm(0.0),
           m_dLastSyncAdjustment(1.0) {
     m_dSyncTargetBeatDistance.setValue(0.0);
@@ -228,6 +229,23 @@ BpmControl::BpmControl(const QString& group,
             &TapFilter::tapped,
             this,
             &BpmControl::slotTempoTapFilter,
+            Qt::DirectConnection);
+
+    // Tap meter: measures the tapped BPM without modifying track or rate.
+    m_pBpmTapMeter = std::make_unique<ControlPushButton>(
+            ConfigKey(group, "bpm_tap_meter"));
+    m_pBpmTapMeterValue = std::make_unique<ControlObject>(
+            ConfigKey(group, "bpm_tap_meter_value"));
+    m_pBpmTapMeterValue->setReadOnly();
+    connect(m_pBpmTapMeter.get(),
+            &ControlObject::valueChanged,
+            this,
+            &BpmControl::slotBpmTapMeter,
+            Qt::DirectConnection);
+    connect(&m_meterTapFilter,
+            &TapFilter::tapped,
+            this,
+            &BpmControl::slotBpmTapMeterFilter,
             Qt::DirectConnection);
 
     m_pTranslateBeats = std::make_unique<ControlPushButton>(
@@ -465,6 +483,20 @@ void BpmControl::slotTempoTap(double v) {
     if (v > 0) {
         m_tempoTapFilter.tap();
     }
+}
+
+void BpmControl::slotBpmTapMeter(double v) {
+    if (v > 0) {
+        m_meterTapFilter.tap();
+    }
+}
+
+void BpmControl::slotBpmTapMeterFilter(double averageLength, int numSamples) {
+    if (averageLength <= 0 || numSamples < 4) {
+        return;
+    }
+    auto averageBpm = averageBpmRoundedWithinRange(averageLength, 1.0);
+    m_pBpmTapMeterValue->forceSet(averageBpm.value());
 }
 
 void BpmControl::slotTempoTapFilter(double averageLength, int numSamples) {

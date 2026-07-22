@@ -347,19 +347,12 @@ void DlgPrefSound::slotApply() {
                 ConfigValue(static_cast<int>(keylockEngine)));
 
 #ifdef __RUBBERBAND__
-        bool keylockMultithreading = m_pSettings->getValue(
-                kKeylockMultiThreadingCfgkey, false);
         m_pSettings->setValue(kKeylockMultiThreadingCfgkey,
                 keylockDualthreadedCheckBox->isChecked() &&
                         keylockDualthreadedCheckBox->isEnabled());
-        if (keylockMultithreading !=
-                (keylockDualthreadedCheckBox->isChecked() &&
-                        keylockDualthreadedCheckBox->isEnabled())) {
-            QMessageBox::information(this,
-                    tr("Information"),
-                    tr("Mixxx must be restarted before the multi-threaded "
-                       "RubberBand setting change will take effect."));
-        }
+        // Restart-required popup intentionally suppressed (user preference).
+        // The multi-threaded RubberBand change still applies after the next
+        // manual restart of Mixxx; we just don't nag about it.
 #endif
         status = m_pSoundManager->setConfig(m_config);
     }

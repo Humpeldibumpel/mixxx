@@ -141,7 +141,8 @@ allshader::WaveformRenderMark::WaveformRenderMark(
         WaveformWidgetRenderer* waveformWidget,
         ::WaveformRendererAbstract::PositionSource type)
         : ::WaveformRenderMarkBase(waveformWidget, false),
-          m_beatsUntilMark(0),
+          m_currentBarNumber(0),
+          m_currentBeatInBar(0),
           m_timeUntilMark(0.0),
           m_pTimeRemainingControl(nullptr),
           m_isSlipRenderer(type == ::WaveformRendererAbstract::Slip),
@@ -430,7 +431,9 @@ void allshader::WaveformRenderMark::updateDigitsNodeForUntilMark(float x) {
             untilMarkMaxHeightForText,
             m_waveformRenderer->getDevicePixelRatio());
 
-    if (m_timeUntilMark == 0.0) {
+    const bool showBars = m_untilMarkShowBeats && m_currentBarNumber > 0;
+    const bool showTime = m_untilMarkShowTime && m_timeUntilMark != 0.0;
+    if (!showBars && !showTime) {
         m_pDigitsRenderNode->clear();
         return;
     }
@@ -441,7 +444,7 @@ void allshader::WaveformRenderMark::updateDigitsNodeForUntilMark(float x) {
             ? m_waveformRenderer->getBreadth() - ch
             : m_waveformRenderer->getBreadth() / 2.f;
 
-    bool multiLine = m_untilMarkShowBeats && m_untilMarkShowTime &&
+    bool multiLine = showBars && showTime &&
             ch * 2.f < untilMarkMaxHeightForText;
 
     if (multiLine) {
@@ -459,8 +462,10 @@ void allshader::WaveformRenderMark::updateDigitsNodeForUntilMark(float x) {
             x,
             y,
             multiLine,
-            m_untilMarkShowBeats ? QString::number(m_beatsUntilMark) : QString{},
-            m_untilMarkShowTime ? timeSecToString(m_timeUntilMark) : QString{});
+            showBars ? QString::number(m_currentBarNumber) + QChar('.') +
+                            QString::number(m_currentBeatInBar)
+                     : QString{},
+            showTime ? timeSecToString(m_timeUntilMark) : QString{});
 }
 
 // Generate the texture used to draw the play position marker.
@@ -573,20 +578,14 @@ void allshader::WaveformRenderMark::updateMarkImage(WaveformMarkPointer pMark) {
 
 void allshader::WaveformRenderMark::updateUntilMark(
         double playPosition, double nextMarkPosition) {
-    m_beatsUntilMark = 0;
+    m_currentBarNumber = 0;
+    m_currentBeatInBar = 0;
     m_timeUntilMark = 0.0;
-    if (nextMarkPosition == std::numeric_limits<double>::max()) {
-        return;
-    }
 
     TrackPointer trackInfo = m_waveformRenderer->getTrackInfo();
-
     if (!trackInfo) {
         return;
     }
-
-    const double endPosition = m_waveformRenderer->getTrackSamples();
-    const double remainingTime = m_pTimeRemainingControl->get();
 
     mixxx::BeatsPointer trackBeats = trackInfo->getBeats();
     if (!trackBeats) {
@@ -595,30 +594,45 @@ void allshader::WaveformRenderMark::updateUntilMark(
 
     auto itA = trackBeats->iteratorFrom(
             mixxx::audio::FramePos::fromEngineSamplePos(playPosition));
-    auto itB = trackBeats->iteratorFrom(
-            mixxx::audio::FramePos::fromEngineSamplePos(nextMarkPosition));
 
-    // itB is the beat at or after the nextMarkPosition.
-    if (itB->toEngineSamplePos() > nextMarkPosition) {
-        // if itB is after nextMarkPosition, the previous beat might be closer
-        // and it the one we are interested in
-        if (nextMarkPosition - (itB - 1)->toEngineSamplePos() <
-                itB->toEngineSamplePos() - nextMarkPosition) {
-            itB--;
-        }
-    }
-
+    int currentBeatOffset;
     if (std::abs(itA->toEngineSamplePos() - playPosition) < 1) {
+        currentBeatOffset = itA.beatOffset();
         m_currentBeatPosition = itA->toEngineSamplePos();
-        m_beatsUntilMark = std::distance(itA, itB);
         itA++;
         m_nextBeatPosition = itA->toEngineSamplePos();
     } else {
         m_nextBeatPosition = itA->toEngineSamplePos();
         itA--;
+        currentBeatOffset = itA.beatOffset();
         m_currentBeatPosition = itA->toEngineSamplePos();
-        m_beatsUntilMark = std::distance(itA, itB);
     }
+
+    // Bar 1 starts at the first downbeat in the track. A downbeat is a beat
+    // whose offset satisfies (beatOffset - downbeatOffset) % kBeatsPerBar == 0
+    // (same convention as WaveformRenderDownBeat).
+    constexpr int kBeatsPerBar = 4;
+    const int downbeatOffset = trackInfo->getDownbeatOffset();
+    const auto itFirst = trackBeats->iteratorFrom(mixxx::audio::kStartFramePos);
+    int firstDownbeatOffset = itFirst.beatOffset();
+    const int rem =
+            ((firstDownbeatOffset - downbeatOffset) % kBeatsPerBar + kBeatsPerBar) %
+            kBeatsPerBar;
+    if (rem != 0) {
+        firstDownbeatOffset += (kBeatsPerBar - rem);
+    }
+    if (currentBeatOffset >= firstDownbeatOffset) {
+        m_currentBarNumber =
+                (currentBeatOffset - firstDownbeatOffset) / kBeatsPerBar + 1;
+        m_currentBeatInBar =
+                (currentBeatOffset - firstDownbeatOffset) % kBeatsPerBar + 1;
+    }
+
+    if (nextMarkPosition == std::numeric_limits<double>::max()) {
+        return;
+    }
+    const double endPosition = m_waveformRenderer->getTrackSamples();
+    const double remainingTime = m_pTimeRemainingControl->get();
     // As endPosition - playPosition corresponds with remainingTime,
     // we calculate the proportional part of nextMarkPosition - playPosition
     m_timeUntilMark = std::max(0.0,

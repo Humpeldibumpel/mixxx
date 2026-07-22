@@ -1,10 +1,14 @@
 #include "library/basetrackcache.h"
 
+#include <QMap>
+
 #include "library/queryutil.h"
 #include "library/searchquery.h"
 #include "library/searchqueryparser.h"
 #include "library/trackcollection.h"
 #include "moc_basetrackcache.cpp"
+#include "track/cue.h"
+#include "track/cueinfo.h"
 #include "track/globaltrackcache.h"
 #include "track/keyutils.h"
 #include "track/track.h"
@@ -13,6 +17,36 @@
 namespace {
 
 constexpr bool sDebug = false;
+
+// Builds the "Hot Cue" column value: the labels of the set hotcues that have a
+// non-empty label, formatted as "a: label b: label ..." ordered by hotcue slot.
+// Must stay in sync with the SQL expression in MixxxLibraryFeature that produces
+// the same value for tracks that are not currently loaded into memory.
+QString formatHotcueLabels(const QList<CuePointer>& cuePoints) {
+    QMap<int, QString> labelsBySlot;
+    for (const auto& pCue : cuePoints) {
+        if (!pCue) {
+            continue;
+        }
+        const int slot = pCue->getHotCue();
+        if (slot < mixxx::kFirstHotCueIndex) {
+            continue;
+        }
+        const QString label = pCue->getLabel();
+        if (label.isEmpty()) {
+            continue;
+        }
+        labelsBySlot.insert(slot, label);
+    }
+    QStringList parts;
+    parts.reserve(labelsBySlot.size());
+    for (auto it = labelsBySlot.constBegin(); it != labelsBySlot.constEnd(); ++it) {
+        const auto letter = static_cast<char>('a' + (it.key() - mixxx::kFirstHotCueIndex));
+        parts.append(QString(QChar::fromLatin1(letter)) +
+                QStringLiteral(": ") + it.value());
+    }
+    return parts.join(QChar(' '));
+}
 
 }  // namespace
 
@@ -361,6 +395,15 @@ QVariant BaseTrackCache::getTrackValueForColumn(TrackPointer pTrack,
     }
     if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_RATING) == column) {
         return QVariant{pTrack->getRating()};
+    }
+    if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_DANCEABILITY) == column) {
+        return QVariant{pTrack->getDanceability()};
+    }
+    if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_JOY) == column) {
+        return QVariant{pTrack->getJoy()};
+    }
+    if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_HOTCUE) == column) {
+        return QVariant{formatHotcueLabels(pTrack->getCuePoints())};
     }
     if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_KEY) == column) {
         // The Key value is determined by either the KEY_ID or KEY column

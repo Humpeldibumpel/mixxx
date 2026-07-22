@@ -10,6 +10,7 @@
 #include "library/trackset/crate/crate.h"
 #include "library/trackset/crate/cratetablemodel.h"
 #include "preferences/usersettings.h"
+#include "track/track_decl.h"
 #include "track/trackid.h"
 #include "util/parented_ptr.h"
 
@@ -68,6 +69,10 @@ class CrateFeature : public BaseTrackSetFeature {
     void slotExportPlaylist();
     // Copy all of the tracks in a crate to a new directory (like a thumbdrive).
     void slotExportTrackFiles();
+    // Export a single crate to a rekordbox XML (incl. hot cues/loops) on a USB.
+    void slotExportToRekordbox();
+    // Export every crate to a rekordbox XML (one playlist per crate).
+    void slotExportAllCratesToRekordbox();
     void slotAnalyzeCrate();
     void slotCrateTableChanged(CrateId crateId);
     void slotCrateContentChanged(CrateId crateId);
@@ -98,6 +103,8 @@ class CrateFeature : public BaseTrackSetFeature {
     bool isChildIndexSelectedInSidebar(const QModelIndex& index);
     bool readLastRightClickedCrate(Crate* pCrate) const;
 
+    QList<TrackPointer> collectCrateTracks(CrateId crateId);
+
     QString formatRootViewHtml() const;
 
     const QIcon m_lockedCrateIcon;
@@ -125,6 +132,8 @@ class CrateFeature : public BaseTrackSetFeature {
     parented_ptr<QAction> m_pCreateImportPlaylistAction;
     parented_ptr<QAction> m_pExportPlaylistAction;
     parented_ptr<QAction> m_pExportTrackFilesAction;
+    parented_ptr<QAction> m_pExportRekordboxAction;
+    parented_ptr<QAction> m_pExportAllCratesRekordboxAction;
 #ifdef __ENGINEPRIME__
     parented_ptr<QAction> m_pExportAllCratesAction;
     parented_ptr<QAction> m_pExportCrateAction;

@@ -1,5 +1,7 @@
 #include "waveform/renderers/allshader/waveformrendererrgb.h"
 
+#include <vector>
+
 #include "rendergraph/material/rgbmaterial.h"
 #include "rendergraph/vertexupdaters/rgbvertexupdater.h"
 #include "track/track.h"
@@ -152,6 +154,34 @@ bool WaveformRendererRGB::preprocessInner() {
 
     const double maxSamplingRange = visualIncrementPerPixel / 2.0;
 
+    // Two-pass rendering to allow smoothing of the amplitude envelope: pass 1
+    // gathers the per-pixel amplitude and color, then an onset-preserving
+    // smoothing is applied over the amplitudes, and pass 2 emits the geometry.
+    // The per-pixel colors are left untouched (only the height is smoothed).
+
+    // Reused member buffers: resize() is a no-op once pixelLength is stable, so
+    // there is no per-frame heap traffic. No zero-fill needed because pass 1
+    // writes every pixel below. Local references keep the code below unchanged.
+    m_ampTop.resize(pixelLength);
+    m_ampBottom.resize(pixelLength);
+    m_color0R.resize(pixelLength);
+    m_color0G.resize(pixelLength);
+    m_color0B.resize(pixelLength);
+    if (splitLeftRight) {
+        m_color1R.resize(pixelLength);
+        m_color1G.resize(pixelLength);
+        m_color1B.resize(pixelLength);
+    }
+    std::vector<float>& ampTop = m_ampTop;
+    std::vector<float>& ampBottom = m_ampBottom;
+    std::vector<float>& color0R = m_color0R;
+    std::vector<float>& color0G = m_color0G;
+    std::vector<float>& color0B = m_color0B;
+    std::vector<float>& color1R = m_color1R;
+    std::vector<float>& color1G = m_color1G;
+    std::vector<float>& color1B = m_color1B;
+
+    // Pass 1: gather per-pixel amplitude and color.
     for (int pos = 0; pos < pixelLength; ++pos) {
         const int visualFrameStart = std::lround(xVisualFrame - maxSamplingRange);
         const int visualFrameStop = std::lround(xVisualFrame + maxSamplingRange);
@@ -159,8 +189,6 @@ bool WaveformRendererRGB::preprocessInner() {
         const int visualIndexStart = std::max(visualFrameStart * 2, 0);
         const int visualIndexStop =
                 std::min(std::max(visualFrameStop, visualFrameStart + 1) * 2, dataSize - 1);
-
-        const float fpos = static_cast<float>(pos) * invDevicePixelRatio;
 
         // Find the max values for low, mid, high and all in the waveform data.
         // - Max of left and right
@@ -241,31 +269,75 @@ bool WaveformRendererRGB::preprocessInner() {
                 blue *= normFactor;
             }
 
-            // Lines are thin rectangles
-            if (!splitLeftRight) {
-                vertexUpdater.addRectangle({fpos - halfPixelSize,
-                                                   halfBreadth - heightFactorAbs * maxAllChn[0]},
-                        {fpos + halfPixelSize,
-                                m_isSlipRenderer
-                                        ? halfBreadth
-                                        : halfBreadth + heightFactorAbs * maxAllChn[1]},
-                        {red,
-                                green,
-                                blue});
+            if (chn == 0) {
+                color0R[pos] = red;
+                color0G[pos] = green;
+                color0B[pos] = blue;
             } else {
-                // note: heightFactor is the same for left and right,
-                // but negative for left (chn 0) and positive for right (chn 1)
-                vertexUpdater.addRectangle({fpos - halfPixelSize,
-                                                   halfBreadth},
-                        {fpos + halfPixelSize,
-                                halfBreadth + heightFactor[chn] * maxAllChn[chn]},
-                        {red,
-                                green,
-                                blue});
+                color1R[pos] = red;
+                color1G[pos] = green;
+                color1B[pos] = blue;
             }
         }
 
+        ampTop[pos] = maxAllChn[0];
+        ampBottom[pos] = maxAllChn[1];
+
         xVisualFrame += visualIncrementPerPixel;
+    }
+
+    // Onset-preserving smoothing of the amplitude envelope: instant attack
+    // (rising values are followed immediately) keeps the sharp leading edge
+    // that marks the start of a sound, while a gradual release eases the decay
+    // and removes the jagged dips. Processed left-to-right (= past to future).
+    // kReleaseFactor in [0,1): higher = smoother/longer decay, 0 = no smoothing.
+    constexpr float kReleaseFactor = 0.78f;
+    if (kReleaseFactor > 0.f) {
+        float envTop = 0.f;
+        float envBottom = 0.f;
+        for (int pos = 0; pos < pixelLength; ++pos) {
+            const float rawTop = ampTop[pos];
+            const float rawBottom = ampBottom[pos];
+            envTop = (rawTop >= envTop)
+                    ? rawTop
+                    : envTop * kReleaseFactor + rawTop * (1.f - kReleaseFactor);
+            envBottom = (rawBottom >= envBottom)
+                    ? rawBottom
+                    : envBottom * kReleaseFactor + rawBottom * (1.f - kReleaseFactor);
+            ampTop[pos] = envTop;
+            ampBottom[pos] = envBottom;
+        }
+    }
+
+    // Pass 2: emit the geometry (lines are thin rectangles).
+    for (int pos = 0; pos < pixelLength; ++pos) {
+        const float fpos = static_cast<float>(pos) * invDevicePixelRatio;
+        if (!splitLeftRight) {
+            vertexUpdater.addRectangle({fpos - halfPixelSize,
+                                               halfBreadth - heightFactorAbs * ampTop[pos]},
+                    {fpos + halfPixelSize,
+                            m_isSlipRenderer
+                                    ? halfBreadth
+                                    : halfBreadth + heightFactorAbs * ampBottom[pos]},
+                    {color0R[pos],
+                            color0G[pos],
+                            color0B[pos]});
+        } else {
+            // note: heightFactor is the same for left and right,
+            // but negative for left (chn 0) and positive for right (chn 1)
+            const int channelCount = m_isSlipRenderer ? 1 : 2;
+            for (int chn = 0; chn < channelCount; chn++) {
+                const float amp = (chn == 0) ? ampTop[pos] : ampBottom[pos];
+                const float r = (chn == 0) ? color0R[pos] : color1R[pos];
+                const float g = (chn == 0) ? color0G[pos] : color1G[pos];
+                const float b = (chn == 0) ? color0B[pos] : color1B[pos];
+                vertexUpdater.addRectangle({fpos - halfPixelSize,
+                                                   halfBreadth},
+                        {fpos + halfPixelSize,
+                                halfBreadth + heightFactor[chn] * amp},
+                        {r, g, b});
+            }
+        }
     }
 
     DEBUG_ASSERT(reserved == vertexUpdater.index());

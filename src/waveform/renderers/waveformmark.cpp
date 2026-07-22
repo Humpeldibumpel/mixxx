@@ -456,7 +456,10 @@ QImage WaveformMark::generateImage(float devicePixelRatio) {
         if (!label.isEmpty()) {
             label.prepend(": ");
         }
-        label.prepend(QString::number(getHotCue() + 1));
+        const int hotCueIndex = getHotCue();
+        label.prepend(hotCueIndex < 26
+                        ? QString(QChar('a' + hotCueIndex))
+                        : QString::number(hotCueIndex + 1));
     }
 
     const bool useIcon = m_iconPath != "";

@@ -386,11 +386,9 @@ void DlgPrefInterface::slotSetTooltips() {
 }
 
 void DlgPrefInterface::notifyRebootNecessary() {
-    // make the fact that you have to restart mixxx more obvious
-    QMessageBox::information(this,
-            tr("Information"),
-            tr("Mixxx must be restarted before the new locale, scaling or multi-sampling "
-               "settings will take effect."));
+    // Restart-required popup intentionally suppressed (user preference).
+    // The affected settings (locale, scaling, multi-sampling) still apply after
+    // the next manual restart of Mixxx; we just don't nag about it.
 }
 
 void DlgPrefInterface::slotSetScheme(int) {

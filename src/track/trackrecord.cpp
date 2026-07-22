@@ -374,6 +374,8 @@ bool operator==(const TrackRecord& lhs, const TrackRecord& rhs) {
             lhs.getBpmLocked() == rhs.getBpmLocked() &&
             lhs.getKeys() == rhs.getKeys() &&
             lhs.getRating() == rhs.getRating() &&
+            lhs.getDanceability() == rhs.getDanceability() &&
+            lhs.getJoy() == rhs.getJoy() &&
             lhs.m_headerParsed == rhs.m_headerParsed;
 }
 

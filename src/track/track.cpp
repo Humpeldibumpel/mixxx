@@ -520,10 +520,19 @@ void Track::afterBeatsAndBpmUpdated(
 }
 
 void Track::setDownbeatOffset(int offset) {
-    m_downbeat_offset = offset;
+    auto locked = lockMutex(&m_qMutex);
+    if (!m_pBeats) {
+        return;
+    }
     const auto newBeats = m_pBeats->trySetDownbeatsOffset(offset);
-    if (newBeats) {
-        trySetBeats(*newBeats);
+    // Changing the downbeat offset only re-labels which beat is beat "1"; it
+    // does not alter the tempo or any beat position. It is therefore allowed
+    // even while the BPM is locked, so we bypass the lock check in
+    // trySetBeatsWhileLocked() and set the beats directly. setBeatsWhileLocked()
+    // also keeps m_downbeat_offset in sync, so the visual marker and the stored
+    // value never drift apart.
+    if (newBeats && setBeatsWhileLocked(*newBeats)) {
+        afterBeatsAndBpmUpdated(&locked);
     }
 }
 
@@ -1541,6 +1550,32 @@ void Track::setRating (int rating) {
     if (compareAndSet(m_record.ptrRating(), rating)) {
         markDirtyAndUnlock(&locked);
         emit ratingUpdated(rating);
+    }
+}
+
+QString Track::getDanceability() const {
+    const auto locked = lockMutex(&m_qMutex);
+    return m_record.getDanceability();
+}
+
+void Track::setDanceability(const QString& danceability) {
+    auto locked = lockMutex(&m_qMutex);
+    if (compareAndSet(m_record.ptrDanceability(), danceability)) {
+        markDirtyAndUnlock(&locked);
+        emit danceabilityChanged(danceability);
+    }
+}
+
+QString Track::getJoy() const {
+    const auto locked = lockMutex(&m_qMutex);
+    return m_record.getJoy();
+}
+
+void Track::setJoy(const QString& joy) {
+    auto locked = lockMutex(&m_qMutex);
+    if (compareAndSet(m_record.ptrJoy(), joy)) {
+        markDirtyAndUnlock(&locked);
+        emit joyChanged(joy);
     }
 }
 

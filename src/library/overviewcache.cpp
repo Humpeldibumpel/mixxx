@@ -1,12 +1,20 @@
 #include "library/overviewcache.h"
 
+#include <QFont>
+#include <QFontMetrics>
 #include <QFutureWatcher>
+#include <QPainter>
 #include <QPixmapCache>
 #include <QSqlDatabase>
 #include <QtConcurrentRun>
 
+#include "engine/engine.h"
 #include "library/dao/analysisdao.h"
+#include "library/dao/cuedao.h"
 #include "moc_overviewcache.cpp"
+#include "track/cue.h"
+#include "track/cueinfo.h"
+#include "util/color/rgbcolor.h"
 #include "util/db/dbconnectionpooled.h"
 #include "util/db/dbconnectionpooler.h"
 #include "util/logger.h"
@@ -31,6 +39,119 @@ const Qt::TransformationMode kTransformationMode = Qt::SmoothTransformation;
 
 inline QImage resizeImageSize(const QImage& image, QSize size) {
     return image.scaled(size, Qt::IgnoreAspectRatio, kTransformationMode);
+}
+
+// Hotcue index -> label: a, b, c, ... z, then numbers (matches the rest of
+// the build, see WOverview::hotcueLabel).
+QString hotcueLabel(int hotCueIndex) {
+    return hotCueIndex < 26
+            ? QString(QChar('a' + hotCueIndex))
+            : QString::number(hotCueIndex + 1);
+}
+
+void drawHotcueMarks(QImage* pImage,
+        const QList<CuePointer>& cues,
+        double totalEngineSamples) {
+    if (totalEngineSamples <= 0.0 || pImage->isNull()) {
+        return;
+    }
+    QPainter painter(pImage);
+    painter.setRenderHint(QPainter::Antialiasing, false);
+    painter.setRenderHint(QPainter::TextAntialiasing, true);
+    const int height = pImage->height();
+    const int width = pImage->width();
+
+    // Fallback color for cues without an assigned color.
+    const QColor fallbackColor(80, 170, 255, 235);
+
+    // Rekordbox-style lettered tag at the top of each marker.
+    const int fontPx = qBound(7, height - 6, 12);
+    QFont font = painter.font();
+    font.setBold(true);
+    font.setPixelSize(fontPx);
+    painter.setFont(font);
+    const QFontMetrics fontMetrics(font);
+    const int tagHeight = qMin(height, fontPx + 4);
+
+    auto sampleToX = [&](double engineSamplePos) {
+        int x = static_cast<int>(engineSamplePos / totalEngineSamples * width);
+        if (x < 0) {
+            return 0;
+        }
+        if (x >= width) {
+            return width - 1;
+        }
+        return x;
+    };
+
+    for (const CuePointer& pCue : cues) {
+        if (!pCue) {
+            continue;
+        }
+        const mixxx::CueType type = pCue->getType();
+        if (type != mixxx::CueType::HotCue && type != mixxx::CueType::Loop) {
+            continue;
+        }
+        const mixxx::audio::FramePos pos = pCue->getPosition();
+        if (!pos.isValid()) {
+            continue;
+        }
+        const double engineSamplePos = pos.toEngineSamplePos();
+        if (engineSamplePos < 0.0 || engineSamplePos >= totalEngineSamples) {
+            continue;
+        }
+
+        QColor cueColor = mixxx::RgbColor::toQColor(pCue->getColor());
+        if (!cueColor.isValid()) {
+            cueColor = fallbackColor;
+        }
+        cueColor.setAlpha(235);
+        QColor loopFillColor = cueColor;
+        loopFillColor.setAlpha(70);
+
+        // length stored in CueDAO is already divided by channel count, so
+        // multiply back to get engine-sample units consistent with position.
+        const double lengthEngineSamples = pCue->getLengthFrames() *
+                mixxx::kEngineChannelOutputCount.toDouble();
+        const int xStart = sampleToX(engineSamplePos);
+
+        if (lengthEngineSamples > 0.0) {
+            const int xEnd = sampleToX(engineSamplePos + lengthEngineSamples);
+            if (xEnd > xStart) {
+                painter.fillRect(QRect(xStart, 0, xEnd - xStart, height),
+                        loopFillColor);
+            }
+            painter.setPen(QPen(cueColor, 2));
+            painter.drawLine(xStart, 0, xStart, height);
+            if (xEnd != xStart) {
+                painter.drawLine(xEnd, 0, xEnd, height);
+            }
+        } else {
+            painter.setPen(QPen(cueColor, 2));
+            painter.drawLine(xStart, 0, xStart, height);
+        }
+
+        // Lettered tag (only for cues mapped to a hotcue slot).
+        const int hotCue = pCue->getHotCue();
+        if (hotCue >= 0 && tagHeight >= 7) {
+            const QString label = hotcueLabel(hotCue);
+            const int tagWidth = fontMetrics.horizontalAdvance(label) + 5;
+            int tagX = xStart;
+            if (tagX + tagWidth > width) {
+                tagX = width - tagWidth;
+            }
+            if (tagX < 0) {
+                tagX = 0;
+            }
+            const QRect tagRect(tagX, 0, tagWidth, tagHeight);
+            painter.fillRect(tagRect, cueColor);
+            // Pick a readable text color based on the tag brightness.
+            const QColor textColor =
+                    qGray(cueColor.rgb()) < 130 ? Qt::white : Qt::black;
+            painter.setPen(textColor);
+            painter.drawText(tagRect, Qt::AlignCenter, label);
+        }
+    }
 }
 } // anonymous namespace
 
@@ -96,6 +217,17 @@ void OverviewCache::onTrackSummaryChanged(TrackId trackId) {
     m_tracksWithoutOverview.remove(trackId);
     // then let users request an update independent from paint events
     emit overviewChanged(trackId);
+}
+
+void OverviewCache::onTracksChanged(const QSet<TrackId>& trackIds) {
+    // Track changes include hotcue edits, which are baked into the overview
+    // pixmap. Drop the cached pixmaps so they get re-rendered with current
+    // cues. Visible rows are repainted lazily via overviewChanged().
+    for (const TrackId trackId : trackIds) {
+        if (m_cacheKeysByTrackId.contains(trackId)) {
+            onTrackSummaryChanged(trackId);
+        }
+    }
 }
 
 QPixmap OverviewCache::requestCachedOverview(
@@ -216,6 +348,18 @@ OverviewCache::FutureResult OverviewCache::prepareOverview(
 
             if (!image.isNull()) {
                 image = resizeImageSize(image, desiredSize);
+
+                // Overlay hotcue markers so users can see at a glance which
+                // tracks have cues set up and roughly where.
+                CueDAO cueDao;
+                cueDao.initialize(mixxx::DbConnectionPooled(pDbConnectionPool));
+                const QList<CuePointer> cues = cueDao.getCuesForTrack(trackId);
+                if (!cues.isEmpty()) {
+                    const double totalEngineSamples =
+                            static_cast<double>(pLoadedTrackWaveformSummary->getDataSize()) *
+                            pLoadedTrackWaveformSummary->getAudioVisualRatio();
+                    drawHotcueMarks(&image, cues, totalEngineSamples);
+                }
             }
             result.image = image;
         }

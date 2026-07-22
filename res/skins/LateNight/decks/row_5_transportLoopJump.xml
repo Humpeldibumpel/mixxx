@@ -114,20 +114,20 @@
                 <Children>
 
                   <Template src="skins:LateNight/controls/button_hotcue.xml">
-                    <SetVariable name="number">1</SetVariable>
+                    <SetVariable name="number">1</SetVariable><SetVariable name="letter">a</SetVariable>
                   </Template>
                   <Template src="skins:LateNight/controls/button_hotcue.xml">
-                    <SetVariable name="number">2</SetVariable>
+                    <SetVariable name="number">2</SetVariable><SetVariable name="letter">b</SetVariable>
                   </Template>
 
                   <WidgetGroup>
                     <Layout>horizontal</Layout>
                     <Children>
                       <Template src="skins:LateNight/controls/button_hotcue.xml">
-                        <SetVariable name="number">3</SetVariable>
+                        <SetVariable name="number">3</SetVariable><SetVariable name="letter">c</SetVariable>
                       </Template>
                       <Template src="skins:LateNight/controls/button_hotcue.xml">
-                        <SetVariable name="number">4</SetVariable>
+                        <SetVariable name="number">4</SetVariable><SetVariable name="letter">d</SetVariable>
                       </Template>
                     </Children>
                     <Connection>
@@ -145,10 +145,10 @@
                     <Layout>horizontal</Layout>
                     <Children>
                       <Template src="skins:LateNight/controls/button_hotcue.xml">
-                        <SetVariable name="number">3</SetVariable>
+                        <SetVariable name="number">3</SetVariable><SetVariable name="letter">c</SetVariable>
                       </Template>
                       <Template src="skins:LateNight/controls/button_hotcue.xml">
-                        <SetVariable name="number">4</SetVariable>
+                        <SetVariable name="number">4</SetVariable><SetVariable name="letter">d</SetVariable>
                       </Template>
                     </Children>
                   </WidgetGroup>
@@ -157,16 +157,16 @@
                     <Layout>horizontal</Layout>
                     <Children>
                       <Template src="skins:LateNight/controls/button_hotcue.xml">
-                        <SetVariable name="number">5</SetVariable>
+                        <SetVariable name="number">5</SetVariable><SetVariable name="letter">e</SetVariable>
                       </Template>
                       <Template src="skins:LateNight/controls/button_hotcue.xml">
-                        <SetVariable name="number">6</SetVariable>
+                        <SetVariable name="number">6</SetVariable><SetVariable name="letter">f</SetVariable>
                       </Template>
                       <Template src="skins:LateNight/controls/button_hotcue.xml">
-                        <SetVariable name="number">7</SetVariable>
+                        <SetVariable name="number">7</SetVariable><SetVariable name="letter">g</SetVariable>
                       </Template>
                       <Template src="skins:LateNight/controls/button_hotcue.xml">
-                        <SetVariable name="number">8</SetVariable>
+                        <SetVariable name="number">8</SetVariable><SetVariable name="letter">h</SetVariable>
                       </Template>
                     </Children>
                   </WidgetGroup>
@@ -367,6 +367,58 @@
               <BindProperty>visible</BindProperty>
             </Connection>
           </WidgetGroup><!-- /Jump buttons + beatjump size spinbox -->
+
+          <WidgetGroup><Size>2f,0min</Size></WidgetGroup>
+          <WidgetGroup><SizePolicy>i,min</SizePolicy><MaximumSize>8,</MaximumSize></WidgetGroup>
+
+          <WidgetGroup><!-- TAP meter: BPM display + TAP button -->
+            <ObjectName>BeatjumpControls</ObjectName>
+            <Layout>vertical</Layout>
+            <SizePolicy>min,min</SizePolicy>
+            <MinimumSize>52,52</MinimumSize>
+            <MaximumSize>60,52</MaximumSize>
+            <Children>
+              <WidgetGroup><!-- BPM display -->
+                <ObjectName>AlignLeftTop</ObjectName>
+                <Layout>horizontal</Layout>
+                <SizePolicy>0min,26f</SizePolicy>
+                <Children>
+                  <Number>
+                    <ObjectName>BpmText</ObjectName>
+                    <TooltipId>bpm_tap_meter_value</TooltipId>
+                    <MinimumSize>52,26</MinimumSize>
+                    <MaximumSize>60,26</MaximumSize>
+                    <SizePolicy>me,f</SizePolicy>
+                    <Alignment>center</Alignment>
+                    <NumberOfDigits>1</NumberOfDigits>
+                    <Connection>
+                      <ConfigKey><Variable name="Group"/>,bpm_tap_meter_value</ConfigKey>
+                    </Connection>
+                  </Number>
+                </Children>
+              </WidgetGroup>
+              <WidgetGroup>
+                <ObjectName>AlignLeftTop</ObjectName>
+                <Layout>horizontal</Layout>
+                <SizePolicy>min,max</SizePolicy>
+                <Children>
+                  <Template src="skins:LateNight/controls/button_1state.xml">
+                    <SetVariable name="TooltipId">bpm_tap_meter</SetVariable>
+                    <SetVariable name="ObjectName">TapButton</SetVariable>
+                    <SetVariable name="Size">52f,26f</SetVariable>
+                    <SetVariable name="BtnSize">medium</SetVariable>
+                    <SetVariable name="state_0_text">TAP</SetVariable>
+                    <SetVariable name="Align">center</SetVariable>
+                    <SetVariable name="ConfigKey"><Variable name="Group"/>,bpm_tap_meter</SetVariable>
+                  </Template>
+                </Children>
+              </WidgetGroup>
+            </Children>
+            <Connection>
+              <ConfigKey>[Skin],show_beatjump_controls</ConfigKey>
+              <BindProperty>visible</BindProperty>
+            </Connection>
+          </WidgetGroup><!-- /TAP meter -->
 
           <WidgetGroup><Size>2f,0min</Size></WidgetGroup>
           <WidgetGroup><SizePolicy>i,min</SizePolicy></WidgetGroup>

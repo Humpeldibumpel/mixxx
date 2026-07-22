@@ -335,8 +335,22 @@ WTrackTableViewHeader::item {
 }
 
 #HotcueButton {
-  /* ronso0
-  TEST pixel fonts instead of icons
+  /* Hotcue letter label (a, b, c, ...) drawn as button <Text>.
+     Default = light letter, good on the empty dark pad and on dark cue colors. */
+  font-size: 13px;
+  font-weight: bold;
+  color: #dddddd;
+}
+/* WHotcueButton sets 'light'/'dark' from the cue-color brightness:
+   light = bright cue color  -> dark letter
+   dark  = dim/dark cue color -> light letter */
+WPushButton#HotcueButton[light="true"] {
+  color: #161616;
+}
+WPushButton#HotcueButton[dark="true"] {
+  color: #eeeeee;
+}
+/* ronso0's earlier experiment (kept for reference) -- pixel fonts instead of icons:
   FAIL basically all characters look blurry with a 100% GUI scale factor of 1oo%
 
   font-size: tried a lot of integers as well as .5 values
@@ -352,7 +366,6 @@ WTrackTableViewHeader::item {
   font-size: 13px;
   color: #eee;
   */
-}
 
 /* This does NOT style the cue labels in the overview
 WOverview {
@@ -1054,4 +1067,9 @@ WLibrarySidebar {
 
 #Border58 {
   border: 1px solid #585858;
+}
+
+/* Custom build: BPM Tap Meter button — white label */
+WPushButton#TapButton {
+  color: white;
 }

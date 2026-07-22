@@ -251,7 +251,10 @@ void VSyncThread::vsyncSlotFinished() {
 }
 
 void VSyncThread::getAvailableVSyncTypes(QList<QPair<int, QString>>* pList) {
-    for (int i = (int)VSyncThread::ST_TIMER; i < (int)VSyncThread::ST_COUNT; i++) {
+    // Start at ST_PLL so the phase-locked-loop mode (smooth, vblank-synced) is
+    // also selectable in the preferences, not just the free-running ST_TIMER
+    // fallback. The deprecated and benchmark-only modes below ST_PLL stay hidden.
+    for (int i = (int)VSyncThread::ST_PLL; i < (int)VSyncThread::ST_COUNT; i++) {
         //if (isAvailable(type))  // TODO
         {
             enum VSyncMode mode = (enum VSyncMode)i;

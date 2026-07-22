@@ -15,6 +15,7 @@ class OverviewCache : public QObject, public Singleton<OverviewCache> {
     Q_OBJECT
   public:
     void onTrackSummaryChanged(TrackId);
+    void onTracksChanged(const QSet<TrackId>& trackIds);
 
     QPixmap requestCachedOverview(
             mixxx::OverviewType type,

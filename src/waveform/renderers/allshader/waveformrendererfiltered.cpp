@@ -1,5 +1,7 @@
 #include "waveform/renderers/allshader/waveformrendererfiltered.h"
 
+#include <vector>
+
 #include "rendergraph/material/rgbmaterial.h"
 #include "rendergraph/vertexupdaters/rgbvertexupdater.h"
 #include "track/track.h"
@@ -142,6 +144,21 @@ bool WaveformRendererFiltered::preprocessInner() {
                     numVerticesPerLine * (1 + pixelLength * 2)}};
     const double maxSamplingRange = visualIncrementPerPixel / 2.0;
 
+    // Two-pass rendering to allow smoothing of the per-band amplitude
+    // envelopes: pass 1 gathers the per-pixel band maxima, then an
+    // onset-preserving smoothing is applied over each band, and pass 2 emits
+    // the stacked geometry. The colors are left untouched (only the heights are
+    // smoothed).
+
+    // [band][channel] amplitude per pixel. Reused member buffers: resize() is a
+    // no-op once pixelLength is stable, so there is no per-frame heap traffic.
+    // No zero-fill needed because pass 1 writes every pixel below.
+    for (int b = 0; b < 3; ++b) {
+        m_bandMax[b][0].resize(pixelLength);
+        m_bandMax[b][1].resize(pixelLength);
+    }
+
+    // Pass 1: gather per-pixel band maxima.
     for (int pos = 0; pos < pixelLength; ++pos) {
         const int visualFrameStart = std::lround(xVisualFrame - maxSamplingRange);
         const int visualFrameStop = std::lround(xVisualFrame + maxSamplingRange);
@@ -150,10 +167,7 @@ bool WaveformRendererFiltered::preprocessInner() {
         const int visualIndexStop =
                 std::min(std::max(visualFrameStop, visualFrameStart + 1) * 2, dataSize - 1);
 
-        const float fpos = static_cast<float>(pos) * invDevicePixelRatio;
-
         // 3 bands, 2 channels
-        float max[3][2]{};
         uchar u8max[3][2]{};
         for (int chn = 0; chn < 2; chn++) {
             for (int i = visualIndexStart + chn; i < visualIndexStop + chn; i += 2) {
@@ -164,28 +178,55 @@ bool WaveformRendererFiltered::preprocessInner() {
                 u8max[2][chn] = math_max(u8max[2][chn], waveformData.filtered.high);
             }
             // Cast to float
-            max[0][chn] = static_cast<float>(u8max[0][chn]);
-            max[1][chn] = static_cast<float>(u8max[1][chn]);
-            max[2][chn] = static_cast<float>(u8max[2][chn]);
-        }
-
-        // TODO: this can be optimized by using one geometrynode per band
-        // + one for the horizontal axis, and uniform color materials,
-        // instead of passing constant color as vertex.
-
-        for (int bandIndex = 0; bandIndex < 3; bandIndex++) {
-            max[bandIndex][0] *= bandGain[bandIndex];
-            max[bandIndex][1] *= bandGain[bandIndex];
-
-            vertexUpdater[bandIndex].addRectangle(
-                    {fpos - halfPixelSize,
-                            halfBreadth - heightFactor * max[bandIndex][0]},
-                    {fpos + halfPixelSize,
-                            halfBreadth + heightFactor * max[bandIndex][1]},
-                    {rgb[bandIndex]});
+            m_bandMax[0][chn][pos] = static_cast<float>(u8max[0][chn]);
+            m_bandMax[1][chn][pos] = static_cast<float>(u8max[1][chn]);
+            m_bandMax[2][chn][pos] = static_cast<float>(u8max[2][chn]);
         }
 
         xVisualFrame += visualIncrementPerPixel;
+    }
+
+    // Onset-preserving smoothing of each band's amplitude envelope: instant
+    // attack (rising values are followed immediately) keeps the sharp leading
+    // edge that marks the start of a sound, while a gradual release eases the
+    // decay and removes the jagged dips. Processed left-to-right (= past to
+    // future). kReleaseFactor in [0,1): higher = smoother/longer decay,
+    // 0 = no smoothing.
+    constexpr float kReleaseFactor = 0.78f;
+    if (kReleaseFactor > 0.f) {
+        for (int b = 0; b < 3; ++b) {
+            for (int chn = 0; chn < 2; ++chn) {
+                std::vector<float>& v = m_bandMax[b][chn];
+                float env = 0.f;
+                for (int pos = 0; pos < pixelLength; ++pos) {
+                    const float raw = v[pos];
+                    env = (raw >= env)
+                            ? raw
+                            : env * kReleaseFactor + raw * (1.f - kReleaseFactor);
+                    v[pos] = env;
+                }
+            }
+        }
+    }
+
+    // Pass 2: emit the geometry (3 stacked bands).
+    // TODO: this can be optimized by using one geometrynode per band
+    // + one for the horizontal axis, and uniform color materials,
+    // instead of passing constant color as vertex.
+    for (int pos = 0; pos < pixelLength; ++pos) {
+        const float fpos = static_cast<float>(pos) * invDevicePixelRatio;
+
+        for (int bandIndex = 0; bandIndex < 3; bandIndex++) {
+            const float top = m_bandMax[bandIndex][0][pos] * bandGain[bandIndex];
+            const float bottom = m_bandMax[bandIndex][1][pos] * bandGain[bandIndex];
+
+            vertexUpdater[bandIndex].addRectangle(
+                    {fpos - halfPixelSize,
+                            halfBreadth - heightFactor * top},
+                    {fpos + halfPixelSize,
+                            halfBreadth + heightFactor * bottom},
+                    {rgb[bandIndex]});
+        }
     }
 
     DEBUG_ASSERT(reserved ==

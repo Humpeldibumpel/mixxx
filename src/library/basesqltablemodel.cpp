@@ -145,6 +145,12 @@ void BaseSqlTableModel::initSortColumnMapping() {
     m_columnIndexBySortColumnId[static_cast<int>(
             TrackModel::SortColumnId::PlaylistDateTimeAdded)] =
             fieldIndex(ColumnCache::COLUMN_PLAYLISTTRACKSTABLE_DATETIMEADDED);
+    m_columnIndexBySortColumnId[static_cast<int>(
+            TrackModel::SortColumnId::Danceability)] =
+            fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_DANCEABILITY);
+    m_columnIndexBySortColumnId[static_cast<int>(
+            TrackModel::SortColumnId::Joy)] =
+            fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_JOY);
 
     m_sortColumnIdByColumnIndex.clear();
     for (int i = static_cast<int>(TrackModel::SortColumnId::IdMin);
@@ -740,6 +746,10 @@ bool BaseSqlTableModel::setTrackValueForColumn(
         pTrack->setTrackNumber(value.toString());
     } else if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COMMENT) == column) {
         pTrack->setComment(value.toString());
+    } else if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_DANCEABILITY) == column) {
+        pTrack->setDanceability(value.toString());
+    } else if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_JOY) == column) {
+        pTrack->setJoy(value.toString());
     } else if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_BPM) == column) {
         pTrack->trySetBpm(static_cast<double>(value.toDouble()));
     } else if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_PLAYED) == column) {

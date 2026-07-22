@@ -51,6 +51,14 @@ Qt::Alignment effectiveValign(const WaveformMarkPointer& pMark) {
     }
     return valign;
 }
+
+// Render hotcue labels as letters instead of numbers: index 0 -> 'a' ... 25 -> 'z',
+// then fall back to the 1-based number for any hotcue beyond 'z'.
+QString hotcueLabel(int hotCueIndex) {
+    return hotCueIndex < 26
+            ? QString(QChar('a' + hotCueIndex))
+            : QString::number(hotCueIndex + 1);
+}
 } // anonymous namespace
 
 WOverview::WOverview(
@@ -500,9 +508,9 @@ void WOverview::updateCues(const QList<CuePointer> &loadedCues) {
                 // Prepend the hotcue number to hotcues' labels
                 QString newLabel = currentCue->getLabel();
                 if (newLabel.isEmpty()) {
-                    newLabel = QString::number(hotcueNumber + 1);
+                    newLabel = hotcueLabel(hotcueNumber);
                 } else {
-                    newLabel = QString("%1: %2").arg(hotcueNumber + 1).arg(newLabel);
+                    newLabel = QString("%1: %2").arg(hotcueLabel(hotcueNumber), newLabel);
                 }
 
                 if (pMark->m_text != newLabel) {
@@ -1066,7 +1074,7 @@ void WOverview::drawMarks(QPainter* pPainter, const float offset, const float ga
             // ellipsis character, so always show at least the hotcue number if
             // the label does not fit.
             if ((text.isEmpty() || text == "…") && pMark->getHotCue() != Cue::kNoHotCue) {
-                text = QString::number(pMark->getHotCue() + 1);
+                text = hotcueLabel(pMark->getHotCue());
             }
 
             QRectF textRect = fontMetrics.boundingRect(text);

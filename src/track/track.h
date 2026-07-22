@@ -269,6 +269,14 @@ class Track : public QObject {
         setRating(mixxx::TrackRecord::kNoRating);
     }
 
+    // Free-text, Mixxx-internal field shown in the library as "Tanz"
+    QString getDanceability() const;
+    void setDanceability(const QString&);
+
+    // Free-text, Mixxx-internal field shown in the library as "Freude"
+    QString getJoy() const;
+    void setJoy(const QString&);
+
     QString getURL() const;
     void setURL(const QString& url);
 
@@ -489,6 +497,8 @@ class Track : public QObject {
     void replayGainAdjusted(const mixxx::ReplayGain&);
     void colorUpdated(const mixxx::RgbColor::optional_t& color);
     void ratingUpdated(int rating);
+    void danceabilityChanged(const QString&);
+    void joyChanged(const QString&);
     void cuesUpdated();
 #ifdef __STEM__
     void stemsUpdated();

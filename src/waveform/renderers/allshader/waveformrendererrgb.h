@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "rendergraph/geometrynode.h"
 #include "util/class.h"
 #include "waveform/renderers/allshader/waveformrenderersignalbase.h"
@@ -38,6 +40,17 @@ class allshader::WaveformRendererRGB final
     WaveformRendererSignalBase::Options m_options;
 
     bool preprocessInner();
+
+    // Reused per-frame scratch buffers for the two-pass smoothing, kept as
+    // members to avoid heap (re)allocation on every preprocess() call.
+    std::vector<float> m_ampTop;
+    std::vector<float> m_ampBottom;
+    std::vector<float> m_color0R;
+    std::vector<float> m_color0G;
+    std::vector<float> m_color0B;
+    std::vector<float> m_color1R;
+    std::vector<float> m_color1G;
+    std::vector<float> m_color1B;
 
     DISALLOW_COPY_AND_ASSIGN(WaveformRendererRGB);
 };

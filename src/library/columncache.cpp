@@ -66,6 +66,9 @@ void ColumnCache::setColumns(const QStringList& columns) {
     insertColumnNameByEnum(COLUMN_LIBRARYTABLE_LAST_PLAYED_AT, LIBRARYTABLE_LAST_PLAYED_AT);
     insertColumnNameByEnum(COLUMN_LIBRARYTABLE_PLAYED, LIBRARYTABLE_PLAYED);
     insertColumnNameByEnum(COLUMN_LIBRARYTABLE_RATING, LIBRARYTABLE_RATING);
+    insertColumnNameByEnum(COLUMN_LIBRARYTABLE_DANCEABILITY, LIBRARYTABLE_DANCEABILITY);
+    insertColumnNameByEnum(COLUMN_LIBRARYTABLE_JOY, LIBRARYTABLE_JOY);
+    insertColumnNameByEnum(COLUMN_LIBRARYTABLE_HOTCUE, LIBRARYTABLE_HOTCUE);
     insertColumnNameByEnum(COLUMN_LIBRARYTABLE_KEY, LIBRARYTABLE_KEY);
     insertColumnNameByEnum(COLUMN_LIBRARYTABLE_KEY_ID, LIBRARYTABLE_KEY_ID);
     insertColumnNameByEnum(COLUMN_LIBRARYTABLE_BPM_LOCK, LIBRARYTABLE_BPM_LOCK);
@@ -115,6 +118,9 @@ void ColumnCache::setColumns(const QStringList& columns) {
     insertColumnSortByEnum(COLUMN_LIBRARYTABLE_TRACKNUMBER, kSortInt);
     insertColumnSortByEnum(COLUMN_LIBRARYTABLE_FILETYPE, kSortNoCase);
     insertColumnSortByEnum(COLUMN_LIBRARYTABLE_COMMENT, kSortNoCaseLex);
+    insertColumnSortByEnum(COLUMN_LIBRARYTABLE_DANCEABILITY, kSortNoCaseLex);
+    insertColumnSortByEnum(COLUMN_LIBRARYTABLE_JOY, kSortNoCaseLex);
+    insertColumnSortByEnum(COLUMN_LIBRARYTABLE_HOTCUE, kSortNoCaseLex);
     insertColumnSortByEnum(COLUMN_LIBRARYTABLE_BITRATE, kSortInt);
     insertColumnSortByEnum(COLUMN_LIBRARYTABLE_SAMPLERATE, kSortInt);
     insertColumnSortByEnum(COLUMN_LIBRARYTABLE_TIMESPLAYED, kSortInt);

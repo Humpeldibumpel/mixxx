@@ -1240,6 +1240,7 @@ add_library(
   src/library/dlgtrackmetadataexport.cpp
   src/library/export/coverartcopyworker.cpp
   src/library/export/dlgtrackexport.ui
+  src/library/export/rekordboxexport.cpp
   src/library/export/trackexportdlg.cpp
   src/library/export/trackexportwizard.cpp
   src/library/export/trackexportworker.cpp
@@ -1289,6 +1290,7 @@ add_library(
   src/library/tabledelegates/checkboxdelegate.cpp
   src/library/tabledelegates/colordelegate.cpp
   src/library/tabledelegates/coverartdelegate.cpp
+  src/library/tabledelegates/hotcuedelegate.cpp
   src/library/tabledelegates/keydelegate.cpp
   src/library/tabledelegates/locationdelegate.cpp
   src/library/tabledelegates/multilineeditdelegate.cpp

@@ -109,6 +109,8 @@ class BpmControl : public EngineControl {
     void slotBpmTapFilter(double averageLength, int numSamples);
     void slotTempoTap(double value);
     void slotTempoTapFilter(double averageLength, int numSamples);
+    void slotBpmTapMeter(double value);
+    void slotBpmTapMeterFilter(double averageLength, int numSamples);
 
     void slotUpdateRateSlider(double v = 0.0);
     void slotUpdateEngineBpm(double v = 0.0);
@@ -177,6 +179,11 @@ class BpmControl : public EngineControl {
     std::unique_ptr<ControlPushButton> m_pBpmTap;   // File BPM
     std::unique_ptr<ControlPushButton> m_pTempoTap; // Enigne BPM (playback rate)
 
+    // Read-only tap meter: taps compute a BPM that is exposed on
+    // m_pBpmTapMeterValue without touching the track BPM or the rate.
+    std::unique_ptr<ControlPushButton> m_pBpmTapMeter;
+    std::unique_ptr<ControlObject> m_pBpmTapMeterValue;
+
     // Button that translates the beats so the nearest beat is on the current
     // playposition.
     std::unique_ptr<ControlPushButton> m_pTranslateBeats;
@@ -194,6 +201,7 @@ class BpmControl : public EngineControl {
 
     TapFilter m_bpmTapFilter;   // threadsafe
     TapFilter m_tempoTapFilter; // threadsafe
+    TapFilter m_meterTapFilter; // threadsafe
 
     // used in the engine thread only
     double m_dSyncInstantaneousBpm;

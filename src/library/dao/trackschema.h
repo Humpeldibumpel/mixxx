@@ -39,6 +39,10 @@ const QString LIBRARYTABLE_TIMESPLAYED = QStringLiteral("timesplayed");
 const QString LIBRARYTABLE_LAST_PLAYED_AT = QStringLiteral("last_played_at");
 const QString LIBRARYTABLE_PLAYED = QStringLiteral("played");
 const QString LIBRARYTABLE_RATING = QStringLiteral("rating");
+const QString LIBRARYTABLE_DANCEABILITY = QStringLiteral("danceability");
+const QString LIBRARYTABLE_JOY = QStringLiteral("joy");
+// Virtual, read-only column: computed from the cues table, not a real library column
+const QString LIBRARYTABLE_HOTCUE = QStringLiteral("hotcue_labels");
 const QString LIBRARYTABLE_KEY = QStringLiteral("key");
 const QString LIBRARYTABLE_KEY_ID = QStringLiteral("key_id");
 const QString LIBRARYTABLE_BPM_LOCK = QStringLiteral("bpm_lock");

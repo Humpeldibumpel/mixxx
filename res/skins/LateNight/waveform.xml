@@ -136,9 +136,10 @@
             <SignalHighColor></SignalHighColor>
             <SignalMidColor></SignalMidColor>
             <SignalLowColor></SignalLowColor>
-            <SignalRGBHighColor></SignalRGBHighColor>
-            <SignalRGBMidColor></SignalRGBMidColor>
-            <SignalRGBLowColor></SignalRGBLowColor>
+            <!-- Rekordbox-Style: Tiefen blau, Mitten bräunlich-gelb (Amber), Höhen weiß -->
+            <SignalRGBHighColor>#FFFFFF</SignalRGBHighColor>
+            <SignalRGBMidColor>#C8A030</SignalRGBMidColor>
+            <SignalRGBLowColor>#1E5AFF</SignalRGBLowColor>
             <BeatColor><Variable name="BeatColor"/></BeatColor>
             <DownbeatColor><Variable name="DownbeatColor"/></DownbeatColor>
             <AxesColor><Variable name="AxesColor"/></AxesColor>

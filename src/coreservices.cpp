@@ -379,6 +379,12 @@ void CoreServices::initialize(QApplication* pApp) {
             &TrackDAO::waveformSummaryUpdated,
             pOverviewCache,
             &OverviewCache::onTrackSummaryChanged);
+    // Hotcue markers are rendered into the library overview pixmaps, so
+    // invalidate them whenever a track changes (e.g. hotcue added/edited).
+    connect(&(m_pTrackCollectionManager->internalCollection()->getTrackDAO()),
+            &TrackDAO::tracksChanged,
+            pOverviewCache,
+            &OverviewCache::onTracksChanged);
 
     // Binding the PlayManager to the Library may already trigger
     // loading of tracks which requires that the GlobalTrackCache has

@@ -78,7 +78,8 @@ class allshader::WaveformRenderMark : public ::WaveformRenderMarkBase,
             const QRectF& rect,
             QColor color);
 
-    int m_beatsUntilMark;
+    int m_currentBarNumber;
+    int m_currentBeatInBar;
     double m_timeUntilMark;
     double m_currentBeatPosition;
     double m_nextBeatPosition;

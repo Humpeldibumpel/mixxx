@@ -56,6 +56,10 @@ class TrackRecord final {
     MIXXX_DECL_PROPERTY(RgbColor::optional_t, color, Color)
     MIXXX_DECL_PROPERTY(mixxx::audio::FramePos, mainCuePosition, MainCuePosition)
     MIXXX_DECL_PROPERTY(int, rating, Rating)
+    // Free-text, Mixxx-internal field shown in the library as "Tanz"
+    MIXXX_DECL_PROPERTY(QString, danceability, Danceability)
+    // Free-text, Mixxx-internal field shown in the library as "Freude"
+    MIXXX_DECL_PROPERTY(QString, joy, Joy)
     MIXXX_DECL_PROPERTY(bool, bpmLocked, BpmLocked)
 
   public:

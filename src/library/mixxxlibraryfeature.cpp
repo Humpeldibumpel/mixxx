@@ -46,6 +46,9 @@ MixxxLibraryFeature::MixxxLibraryFeature(Library* pLibrary,
             LIBRARYTABLE_TITLE,
             LIBRARYTABLE_YEAR,
             LIBRARYTABLE_RATING,
+            LIBRARYTABLE_DANCEABILITY,
+            LIBRARYTABLE_JOY,
+            LIBRARYTABLE_HOTCUE,
             LIBRARYTABLE_GENRE,
             LIBRARYTABLE_COMPOSER,
             LIBRARYTABLE_GROUPING,
@@ -78,12 +81,30 @@ MixxxLibraryFeature::MixxxLibraryFeature(Library* pLibrary,
             TRACKLOCATIONSTABLE_LOCATION,
             LIBRARYTABLE_GROUPING,
             LIBRARYTABLE_COMMENT,
+            LIBRARYTABLE_DANCEABILITY,
+            LIBRARYTABLE_JOY,
             LIBRARYTABLE_TITLE,
             LIBRARYTABLE_GENRE,
             LIBRARYTABLE_CRATE};
 
     QStringList qualifiedTableColumns;
     for (const auto& col : columns) {
+        if (col == LIBRARYTABLE_HOTCUE) {
+            // Virtual, read-only column: concatenate the labels of the set
+            // hotcues (those with a non-empty label) as "a: label b: label ...",
+            // ordered by hotcue slot. char(97) == 'a', and hotcue indices are
+            // 0-based (mixxx::kFirstHotCueIndex). Must match the live formatting
+            // in BaseTrackCache::getTrackValueForColumn().
+            qualifiedTableColumns.append(QStringLiteral(
+                    "(SELECT group_concat(lbl, ' ') FROM "
+                    "(SELECT (char(97 + hotcue) || ': ' || label) AS lbl "
+                    "FROM cues "
+                    "WHERE cues.track_id = library.id "
+                    "AND cues.hotcue >= 0 AND cues.label <> '' "
+                    "ORDER BY cues.hotcue)) AS ") +
+                    col);
+            continue;
+        }
         qualifiedTableColumns.append(mixxx::trackschema::tableForColumn(col) +
                 QLatin1Char('.') + col);
     }

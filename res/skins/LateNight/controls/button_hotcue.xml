@@ -20,16 +20,22 @@
         <DndRectMargin><Variable name="DndRectMarginHotcueBtn"/></DndRectMargin>
         <State>
           <Number>0</Number>
+          <Text><Variable name="letter"/></Text>
+          <Alignment>center</Alignment>
           <Unpressed scalemode="STRETCH">skins:LateNight/<Variable name="BtnScheme"/>/buttons/btn_<Variable name="BtnType"/>_square.svg</Unpressed>
           <Pressed scalemode="STRETCH">skins:LateNight/<Variable name="BtnScheme"/>/buttons/btn_<Variable name="BtnType"/>_square_active.svg</Pressed>
         </State>
         <State>
           <Number>1</Number>
+          <Text><Variable name="letter"/></Text>
+          <Alignment>center</Alignment>
           <Unpressed scalemode="STRETCH">skins:LateNight/<Variable name="BtnScheme"/>/buttons/btn_<Variable name="BtnType"/>_square_set.svg</Unpressed>
           <Pressed scalemode="STRETCH">skins:LateNight/<Variable name="BtnScheme"/>/buttons/btn_<Variable name="BtnType"/>_square_active.svg</Pressed>
         </State>
         <State>
           <Number>2</Number>
+          <Text><Variable name="letter"/></Text>
+          <Alignment>center</Alignment>
           <Unpressed scalemode="STRETCH">skins:LateNight/<Variable name="BtnScheme"/>/buttons/btn_<Variable name="BtnType"/>_square_set.svg</Unpressed>
           <Pressed scalemode="STRETCH">skins:LateNight/<Variable name="BtnScheme"/>/buttons/btn_<Variable name="BtnType"/>_square_active.svg</Pressed>
         </State>
