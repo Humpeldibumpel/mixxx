@@ -273,11 +273,11 @@ void BaseTrackTableModel::initHeaderProperties() {
             defaultColumnWidth() * 2);
     setHeaderProperties(
             ColumnCache::COLUMN_LIBRARYTABLE_DANCEABILITY,
-            tr("Tanz"),
+            tr("Danceability"),
             defaultColumnWidth() * 2);
     setHeaderProperties(
             ColumnCache::COLUMN_LIBRARYTABLE_JOY,
-            tr("Freude"),
+            tr("Mood"),
             defaultColumnWidth() * 2);
     setHeaderProperties(
             ColumnCache::COLUMN_LIBRARYTABLE_HOTCUE,
