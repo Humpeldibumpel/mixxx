@@ -112,10 +112,8 @@ def inject_stem_atom(mp4_path, out_path):
     open(out_path, "wb").write(new)
 
 
-def main():
-    inp = os.path.abspath(sys.argv[1])
-    out = os.path.abspath(sys.argv[2]) if len(sys.argv) > 2 else \
-        os.path.splitext(inp)[0] + ".stem.mp4"
+def convert(inp, out):
+    """Full pipeline for one file: separate -> mux -> inject manifest."""
     with tempfile.TemporaryDirectory() as wd:
         stem_wavs = separate(inp, wd)
         for name, p in stem_wavs.items():
@@ -124,6 +122,14 @@ def main():
         tmp_mp4 = os.path.join(wd, "muxed.mp4")
         mux(inp, stem_wavs, tmp_mp4)
         inject_stem_atom(tmp_mp4, out)
+    return out
+
+
+def main():
+    inp = os.path.abspath(sys.argv[1])
+    out = os.path.abspath(sys.argv[2]) if len(sys.argv) > 2 else \
+        os.path.splitext(inp)[0] + ".stem.mp4"
+    convert(inp, out)
     print(f"\nFERTIG -> {out}")
 
 
