@@ -6,6 +6,7 @@ master + drums/bass/other/vocals) -> inject the `moov.udta.stem` JSON manifest.
 
 Usage:  python song2stem.py <input-audio> [output.stem.mp4]
 """
+import glob
 import json
 import os
 import struct
@@ -13,7 +14,22 @@ import subprocess
 import sys
 import tempfile
 
-FFMPEG = r"C:\mixxx-build\ffmpeg\ffmpeg-8.1.1-essentials_build\bin\ffmpeg.exe"
+
+def find_ffmpeg():
+    """Locate ffmpeg.exe portably: env var, then bundled next to this script,
+    then the dev machine's fixed path."""
+    env = os.environ.get("MIXXX_FFMPEG")
+    if env and os.path.exists(env):
+        return env
+    here = os.path.dirname(os.path.abspath(__file__))
+    hits = glob.glob(os.path.join(here, "ffmpeg", "**", "ffmpeg.exe"),
+            recursive=True)
+    if hits:
+        return hits[0]
+    return r"C:\mixxx-build\ffmpeg\ffmpeg-8.1.1-essentials_build\bin\ffmpeg.exe"
+
+
+FFMPEG = find_ffmpeg()
 MODEL = "htdemucs"  # 4 stems: drums, bass, other, vocals
 SR = 44100
 BITRATE = "256k"

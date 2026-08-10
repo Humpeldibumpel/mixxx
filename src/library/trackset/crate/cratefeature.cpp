@@ -1032,18 +1032,23 @@ void CrateFeature::slotGenerateStems() {
 
     // The heavy lifting is done by the external Demucs batch converter
     // (custom-build/batch2stem.py); Mixxx just launches it in its own console
-    // window so it can't block the UI. These paths are for this build's machine
-    // — adjust here if the stem-tools location changes.
-    const QString python = QStringLiteral(
-            "C:\\mixxx-build\\stem-tools\\venv\\Scripts\\python.exe");
-    const QString script = QStringLiteral(
-            "C:\\mixxx-build\\stem-tools\\batch2stem.py");
+    // window so it can't block the UI. The tools directory is overridable via
+    // MIXXX_STEM_TOOLS (set by the portable launcher). The current settings DB
+    // is passed so crate lookup works regardless of where Mixxx runs.
+    const QString dir = qEnvironmentVariable("MIXXX_STEM_TOOLS",
+            QStringLiteral("C:/mixxx-build/stem-tools"));
+    const QString python = dir + QStringLiteral("/venv/Scripts/python.exe");
+    const QString script = dir + QStringLiteral("/batch2stem.py");
+    const QString dbPath =
+            m_pConfig->getSettingsPath() + QStringLiteral("/mixxxdb.sqlite");
 
     QStringList args;
     args << QStringLiteral("/c") << QStringLiteral("start")
          << QStringLiteral("Mixxx Stem Conversion")
          << QStringLiteral("cmd") << QStringLiteral("/k")
-         << python << script << QStringLiteral("--crate") << crateName;
+         << python << script
+         << QStringLiteral("--crate") << crateName
+         << QStringLiteral("--db") << dbPath;
 
     if (!QProcess::startDetached(QStringLiteral("cmd.exe"), args)) {
         QMessageBox::warning(nullptr,

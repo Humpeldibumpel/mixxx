@@ -11,12 +11,12 @@
 #include "track/trackref.h"
 
 namespace {
-// Paths to the external converter for this build's machine — adjust here if the
-// stem-tools location changes.
-const QString kPython = QStringLiteral(
-        "C:\\mixxx-build\\stem-tools\\venv\\Scripts\\python.exe");
-const QString kScript = QStringLiteral(
-        "C:\\mixxx-build\\stem-tools\\song2stem.py");
+// The stem-tools directory: overridable via MIXXX_STEM_TOOLS (set by the
+// portable launcher) so it doesn't have to live at the dev machine's path.
+QString stemToolsDir() {
+    return qEnvironmentVariable("MIXXX_STEM_TOOLS",
+            QStringLiteral("C:/mixxx-build/stem-tools"));
+}
 } // namespace
 
 StemConverter::StemConverter(TrackCollectionManager* pTrackCollectionManager,
@@ -72,7 +72,11 @@ void StemConverter::startNext() {
             &QProcess::finished,
             this,
             &StemConverter::onProcessFinished);
-    m_pProcess->start(kPython, {kScript, m_current.source, m_current.stemPath});
+    const QString dir = stemToolsDir();
+    m_pProcess->start(dir + QStringLiteral("/venv/Scripts/python.exe"),
+            {dir + QStringLiteral("/song2stem.py"),
+                    m_current.source,
+                    m_current.stemPath});
 }
 
 void StemConverter::showProgress() {

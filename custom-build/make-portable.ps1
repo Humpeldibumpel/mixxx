@@ -20,7 +20,8 @@
 #>
 param(
     [string]$Dest = "C:\mixxx-portable",
-    [switch]$IncludeConfig
+    [switch]$IncludeConfig,
+    [switch]$IncludeStemTools
 )
 
 $ErrorActionPreference = "Stop"
@@ -79,6 +80,33 @@ if ($IncludeConfig) {
     Write-Host "[3/3] Config uebersprungen (ohne -IncludeConfig). Mixxx legt am Ziel eine frische an." -ForegroundColor Yellow
 }
 
+# --- Optional: Stem-Tools (Demucs) portabel mitpacken ---------------------
+if ($IncludeStemTools) {
+    $stemSrc = Join-Path $Src "stem-tools"
+    $stemDst = Join-Path $Dest "stem-tools"
+    if (Test-Path (Join-Path $stemSrc "venv\Scripts\python.exe")) {
+        Write-Host "[*] Packe Stem-Tools (venv + Python + Modell + ffmpeg) ..." -ForegroundColor Green
+        # venv, gebuendelte Basis-Python und die Skripte (ohne Testausgaben/Logs)
+        $stemExclDirs  = @("__pycache__","test-output","model-cache-backup","hf-cache","ffmpeg")
+        $stemExclFiles = @("*.log","*.orig","install-*.txt","pip-*.log")
+        robocopy $stemSrc $stemDst /E /XD $stemExclDirs /XF $stemExclFiles /NFL /NDL /NJH /NP | Out-Null
+        if ($LASTEXITCODE -ge 8) { throw "robocopy (stem-tools) fehlgeschlagen, Code $LASTEXITCODE" }
+
+        # ffmpeg mitliefern (song2stem.py findet es relativ unter stem-tools\ffmpeg)
+        robocopy (Join-Path $Src "ffmpeg") (Join-Path $stemDst "ffmpeg") /E /NFL /NDL /NJH /NP | Out-Null
+        if ($LASTEXITCODE -ge 8) { throw "robocopy (ffmpeg) fehlgeschlagen, Code $LASTEXITCODE" }
+
+        # HTDemucs-Modell in eine HuggingFace-Cache-Struktur (HF_HOME zeigt darauf)
+        $modelSrc = Join-Path $stemSrc "model-cache-backup\models--adefossez--HTDemucs"
+        if (Test-Path $modelSrc) {
+            robocopy $modelSrc (Join-Path $stemDst "hf-cache\hub\models--adefossez--HTDemucs") /E /NFL /NDL /NJH /NP | Out-Null
+        }
+        Write-Host "    Stem-Tools eingepackt (venv wird beim Start auf die gebuendelte Python umgebogen)." -ForegroundColor Green
+    } else {
+        Write-Host "[*] Hinweis: stem-tools\venv nicht gefunden - Stem-Tools uebersprungen." -ForegroundColor Yellow
+    }
+}
+
 # --- Qt-Plugins vollstaendig aus vcpkg-Qt nachziehen ----------------------
 # Der Build-Ordner enthaelt nur einen Teil der Qt-Plugins (platforms, styles,
 # imageformats, sqldrivers, tls); den Rest findet das Quell-Mixxx zur Laufzeit
@@ -134,6 +162,19 @@ set "BASE=%~dp0"
 set "BASEFWD=%BASE:\=/%"
 set "MIXXX_CONFIG=%BASE%config"
 if not exist "%MIXXX_CONFIG%" mkdir "%MIXXX_CONFIG%"
+
+REM --- Stem-Tools (Demucs) portabel aktivieren, falls mitgepackt ---
+if not exist "%BASE%stem-tools\venv\Scripts\python.exe" goto :nostem
+set "MIXXX_STEM_TOOLS=%BASE%stem-tools"
+set "HF_HOME=%BASE%stem-tools\hf-cache"
+set "HF_HUB_OFFLINE=1"
+REM venv auf die gebuendelte Python umbiegen (Pfad variiert je Rechner/Stick)
+> "%BASE%stem-tools\venv\pyvenv.cfg" echo home = %BASE%stem-tools\python-base
+>>"%BASE%stem-tools\venv\pyvenv.cfg" echo include-system-site-packages = false
+>>"%BASE%stem-tools\venv\pyvenv.cfg" echo version = 3.12.10
+>>"%BASE%stem-tools\venv\pyvenv.cfg" echo executable = %BASE%stem-tools\python-base\python.exe
+:nostem
+
 echo Starte Custom Mixxx (portable) ...
 "%BASE%app\mixxx.exe" --settingsPath "%BASEFWD%config" --resourcePath "%BASEFWD%res" %*
 endlocal
