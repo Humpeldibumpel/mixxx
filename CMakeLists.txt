@@ -1286,6 +1286,7 @@ add_library(
   src/library/serato/seratoplaylistmodel.cpp
   src/library/sidebarmodel.cpp
   src/library/starrating.cpp
+  src/library/stemconverter.cpp
   src/library/tabledelegates/bpmdelegate.cpp
   src/library/tabledelegates/checkboxdelegate.cpp
   src/library/tabledelegates/colordelegate.cpp

@@ -28,6 +28,7 @@ class PlayerManager;
 class PlaylistFeature;
 class RecordingManager;
 class SidebarModel;
+class StemConverter;
 class TrackCollectionManager;
 class WSearchLineEdit;
 class WLibrarySidebar;
@@ -61,6 +62,11 @@ class Library: public QObject {
     }
 
     TrackCollectionManager* trackCollectionManager() const;
+
+    // Sequential background queue for Demucs stem generation.
+    StemConverter* stemConverter() const {
+        return m_pStemConverter.get();
+    }
 
     TrackAnalysisScheduler::Pointer createTrackAnalysisScheduler(
             int numWorkerThreads,
@@ -183,6 +189,8 @@ class Library: public QObject {
     const mixxx::DbConnectionPoolPtr m_pDbConnectionPool;
 
     const QPointer<TrackCollectionManager> m_pTrackCollectionManager;
+
+    std::unique_ptr<StemConverter> m_pStemConverter;
 
     parented_ptr<SidebarModel> m_pSidebarModel;
     parented_ptr<LibraryControl> m_pLibraryControl;

@@ -24,6 +24,7 @@
 #include "library/rhythmbox/rhythmboxfeature.h"
 #include "library/serato/seratofeature.h"
 #include "library/sidebarmodel.h"
+#include "library/stemconverter.h"
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
 #include "library/trackmodel.h"
@@ -83,6 +84,8 @@ Library::Library(
             &TrackCollectionManager::libraryScanFinished,
             this,
             &Library::slotRefreshLibraryModels);
+
+    m_pStemConverter = std::make_unique<StemConverter>(m_pTrackCollectionManager);
 
     // TODO(rryan) -- turn this construction / adding of features into a static
     // method or something -- CreateDefaultLibrary

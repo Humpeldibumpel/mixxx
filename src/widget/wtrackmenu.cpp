@@ -23,10 +23,10 @@
 #include "library/dlgtrackmetadataexport.h"
 #include "library/externaltrackcollection.h"
 #include "library/library.h"
+#include "library/stemconverter.h"
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
 #include "library/trackset/crate/cratetablemodel.h"
-#include "track/trackref.h"
 #include "library/trackmodel.h"
 #include "library/trackmodeliterator.h"
 #include "library/trackprocessing.h"
@@ -1807,64 +1807,29 @@ void WTrackMenu::slotGenerateStems() {
         crateId = pCrateModel->selectedCrate();
     }
 
-    // Capture the persistent Library (NOT `this`: the menu is destroyed as soon
-    // as it closes, long before the multi-minute conversion finishes).
-    Library* pLibrary = m_pLibrary;
-    const QString python = QStringLiteral(
-            "C:\\mixxx-build\\stem-tools\\venv\\Scripts\\python.exe");
-    const QString script = QStringLiteral(
-            "C:\\mixxx-build\\stem-tools\\song2stem.py");
-
-    int started = 0;
+    // Hand the jobs to the Library's persistent StemConverter, which processes
+    // them ONE AT A TIME in the background so multiple Demucs runs don't
+    // saturate the CPU. (The queue must outlive this menu, which is destroyed
+    // as soon as it closes.)
+    StemConverter* pConverter = m_pLibrary->stemConverter();
+    int queued = 0;
     for (const auto& pOriginal : tracks) {
         if (!pOriginal) {
             continue;
         }
-        const QString src = pOriginal->getLocation();
-        const QFileInfo fi(src);
-        const QString stemPath = fi.absolutePath() + QChar('/') +
-                fi.completeBaseName() + QStringLiteral(".stem.mp4");
-        const QString artist = pOriginal->getArtist();
-        const QString title = pOriginal->getTitle();
-
-        auto* pProc = new QProcess(pLibrary);
-        QObject::connect(pProc,
-                &QProcess::finished,
-                pLibrary,
-                [pProc, pLibrary, stemPath, crateId, artist, title](
-                        int exitCode, QProcess::ExitStatus) {
-                    if (exitCode == 0 && QFileInfo::exists(stemPath)) {
-                        auto* pTCM = pLibrary->trackCollectionManager();
-                        TrackPointer pStem = pTCM->getOrAddTrack(
-                                TrackRef::fromFilePath(stemPath));
-                        if (pStem) {
-                            // Mirror the original's metadata and append a suffix
-                            // so the stem sorts directly below its original.
-                            if (!artist.isEmpty()) {
-                                pStem->setArtist(artist);
-                            }
-                            const QString baseTitle = title.isEmpty()
-                                    ? QFileInfo(stemPath).completeBaseName()
-                                    : title;
-                            pStem->setTitle(baseTitle + QStringLiteral(" [Stems]"));
-                            if (crateId.isValid()) {
-                                pTCM->internalCollection()->addCrateTracks(
-                                        crateId, {pStem->getId()});
-                            }
-                        }
-                    }
-                    pProc->deleteLater();
-                });
-        pProc->start(python, {script, src, stemPath});
-        started++;
+        pConverter->enqueue(pOriginal->getLocation(),
+                crateId,
+                pOriginal->getArtist(),
+                pOriginal->getTitle());
+        queued++;
     }
 
     QMessageBox::information(this,
             tr("Generate stems"),
-            tr("Stem generation started for %1 track(s) with Demucs.\n\n"
-               "It runs in the background (a few minutes per track). Each finished "
-               "stem is added to the crate right below its original.")
-                    .arg(started));
+            tr("Queued %1 track(s) for stem generation (Demucs).\n\n"
+               "They are processed one after another in the background; each stem "
+               "appears in the crate below its original when done.")
+                    .arg(queued));
 }
 
 void WTrackMenu::slotLockBpm() {
