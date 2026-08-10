@@ -2,10 +2,13 @@
 
 #include <QCheckBox>
 #include <QDialogButtonBox>
+#include <QFileInfo>
 #include <QInputDialog>
 #include <QList>
 #include <QListWidget>
+#include <QMessageBox>
 #include <QModelIndex>
+#include <QProcess>
 #include <QVBoxLayout>
 
 #include "analyzer/analyzerscheduledtrack.h"
@@ -22,6 +25,8 @@
 #include "library/library.h"
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
+#include "library/trackset/crate/cratetablemodel.h"
+#include "track/trackref.h"
 #include "library/trackmodel.h"
 #include "library/trackmodeliterator.h"
 #include "library/trackprocessing.h"
@@ -572,6 +577,12 @@ void WTrackMenu::createActions() {
                 &QAction::triggered,
                 this,
                 &WTrackMenu::slotReanalyzeWithVariableTempo);
+
+        m_pGenerateStemsAction = make_parented<QAction>(tr("Generate stems (Demucs)"), this);
+        connect(m_pGenerateStemsAction,
+                &QAction::triggered,
+                this,
+                &WTrackMenu::slotGenerateStems);
     }
 
     // This action is only usable when m_deckGroup is set. That is true only
@@ -743,6 +754,8 @@ void WTrackMenu::setupActions() {
         m_pAnalyzeMenu->addAction(m_pReanalyzeAction);
         m_pAnalyzeMenu->addAction(m_pReanalyzeConstBpmAction);
         m_pAnalyzeMenu->addAction(m_pReanalyzeVarBpmAction);
+        m_pAnalyzeMenu->addSeparator();
+        m_pAnalyzeMenu->addAction(m_pGenerateStemsAction);
         addMenu(m_pAnalyzeMenu);
     }
 
@@ -1779,6 +1792,79 @@ void WTrackMenu::slotReanalyzeWithVariableTempo() {
     AnalyzerTrack::Options options;
     options.useFixedTempo = false;
     addToAnalysis(options);
+}
+
+void WTrackMenu::slotGenerateStems() {
+    const TrackPointerList tracks = getTrackPointers();
+    if (tracks.isEmpty()) {
+        return;
+    }
+
+    // If the selection is shown inside a crate, remember it so each finished
+    // stem can be added to that same crate.
+    CrateId crateId;
+    if (auto* pCrateModel = dynamic_cast<CrateTableModel*>(m_pTrackModel)) {
+        crateId = pCrateModel->selectedCrate();
+    }
+
+    // Capture the persistent Library (NOT `this`: the menu is destroyed as soon
+    // as it closes, long before the multi-minute conversion finishes).
+    Library* pLibrary = m_pLibrary;
+    const QString python = QStringLiteral(
+            "C:\\mixxx-build\\stem-tools\\venv\\Scripts\\python.exe");
+    const QString script = QStringLiteral(
+            "C:\\mixxx-build\\stem-tools\\song2stem.py");
+
+    int started = 0;
+    for (const auto& pOriginal : tracks) {
+        if (!pOriginal) {
+            continue;
+        }
+        const QString src = pOriginal->getLocation();
+        const QFileInfo fi(src);
+        const QString stemPath = fi.absolutePath() + QChar('/') +
+                fi.completeBaseName() + QStringLiteral(".stem.mp4");
+        const QString artist = pOriginal->getArtist();
+        const QString title = pOriginal->getTitle();
+
+        auto* pProc = new QProcess(pLibrary);
+        QObject::connect(pProc,
+                &QProcess::finished,
+                pLibrary,
+                [pProc, pLibrary, stemPath, crateId, artist, title](
+                        int exitCode, QProcess::ExitStatus) {
+                    if (exitCode == 0 && QFileInfo::exists(stemPath)) {
+                        auto* pTCM = pLibrary->trackCollectionManager();
+                        TrackPointer pStem = pTCM->getOrAddTrack(
+                                TrackRef::fromFilePath(stemPath));
+                        if (pStem) {
+                            // Mirror the original's metadata and append a suffix
+                            // so the stem sorts directly below its original.
+                            if (!artist.isEmpty()) {
+                                pStem->setArtist(artist);
+                            }
+                            const QString baseTitle = title.isEmpty()
+                                    ? QFileInfo(stemPath).completeBaseName()
+                                    : title;
+                            pStem->setTitle(baseTitle + QStringLiteral(" [Stems]"));
+                            if (crateId.isValid()) {
+                                pTCM->internalCollection()->addCrateTracks(
+                                        crateId, {pStem->getId()});
+                            }
+                        }
+                    }
+                    pProc->deleteLater();
+                });
+        pProc->start(python, {script, src, stemPath});
+        started++;
+    }
+
+    QMessageBox::information(this,
+            tr("Generate stems"),
+            tr("Stem generation started for %1 track(s) with Demucs.\n\n"
+               "It runs in the background (a few minutes per track). Each finished "
+               "stem is added to the crate right below its original.")
+                    .arg(started));
 }
 
 void WTrackMenu::slotLockBpm() {

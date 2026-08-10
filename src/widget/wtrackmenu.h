@@ -160,6 +160,9 @@ class WTrackMenu : public QMenu {
     void slotReanalyze();
     void slotReanalyzeWithFixedTempo();
     void slotReanalyzeWithVariableTempo();
+    // Generate Demucs stems for the selected track(s); add the resulting
+    // .stem.mp4 to the current crate (if any) when the conversion finishes.
+    void slotGenerateStems();
 
     // BPM
     void slotLockBpm();
@@ -357,6 +360,7 @@ class WTrackMenu : public QMenu {
     parented_ptr<QAction> m_pReanalyzeAction;
     parented_ptr<QAction> m_pReanalyzeConstBpmAction;
     parented_ptr<QAction> m_pReanalyzeVarBpmAction;
+    parented_ptr<QAction> m_pGenerateStemsAction;
 
     // Clear track metadata actions
     parented_ptr<QAction> m_pClearBeatsAction;
