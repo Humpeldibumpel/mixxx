@@ -52,7 +52,9 @@ def mux(inp, stem_wavs, out_mp4):
     cmd += ["-map", "0:a:0"]
     for i in range(1, 5):
         cmd += ["-map", f"{i}:a:0"]
-    cmd += ["-c:a", "aac", "-b:a", BITRATE, "-ar", str(SR),
+    # MP3 streams, not AAC: Mixxx's bundled FFmpeg has no internal AAC decoder
+    # (only libfdk_aac, which Mixxx rejects for stems). MP3 decodes natively.
+    cmd += ["-c:a", "libmp3lame", "-b:a", BITRATE, "-ar", str(SR),
             "-movflags", "-faststart",  # keep moov at END (mdat first)
             out_mp4]
     run(cmd)
