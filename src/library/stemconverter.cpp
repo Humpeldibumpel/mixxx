@@ -2,6 +2,7 @@
 
 #include <QFileInfo>
 #include <QProcess>
+#include <QProgressDialog>
 
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
@@ -23,6 +24,7 @@ StemConverter::StemConverter(TrackCollectionManager* pTrackCollectionManager,
         : QObject(parent),
           m_pTrackCollectionManager(pTrackCollectionManager),
           m_pProcess(nullptr),
+          m_pProgress(nullptr),
           m_busy(false),
           m_done(0),
           m_total(0) {
@@ -45,6 +47,9 @@ void StemConverter::enqueue(const QString& sourcePath,
     emit progress(m_done, m_total);
     if (!m_busy) {
         startNext();
+    } else {
+        // A job is already running; just refresh the window's total.
+        showProgress();
     }
 }
 
@@ -53,17 +58,66 @@ void StemConverter::startNext() {
         m_busy = false;
         m_done = 0;
         m_total = 0;
+        if (m_pProgress) {
+            m_pProgress->hide();
+        }
         emit queueEmpty();
         return;
     }
     m_busy = true;
     m_current = m_queue.takeFirst();
+    showProgress();
     m_pProcess = new QProcess(this);
     connect(m_pProcess,
             &QProcess::finished,
             this,
             &StemConverter::onProcessFinished);
     m_pProcess->start(kPython, {kScript, m_current.source, m_current.stemPath});
+}
+
+void StemConverter::showProgress() {
+    if (!m_pProgress) {
+        // Top-level, non-modal window: gives feedback without blocking Mixxx.
+        m_pProgress = new QProgressDialog();
+        m_pProgress->setWindowTitle(tr("Generating stems"));
+        m_pProgress->setWindowModality(Qt::NonModal);
+        m_pProgress->setMinimumDuration(0);
+        m_pProgress->setAutoClose(false);
+        m_pProgress->setAutoReset(false);
+        m_pProgress->setCancelButtonText(tr("Cancel"));
+        connect(m_pProgress,
+                &QProgressDialog::canceled,
+                this,
+                &StemConverter::cancelAll);
+    }
+    const QString name = m_current.title.isEmpty()
+            ? QFileInfo(m_current.source).completeBaseName()
+            : m_current.title;
+    m_pProgress->setMaximum(m_total);
+    m_pProgress->setValue(m_done);
+    m_pProgress->setLabelText(tr("Converting %1/%2:\n%3")
+                    .arg(m_done + 1)
+                    .arg(m_total)
+                    .arg(name));
+    m_pProgress->show();
+}
+
+void StemConverter::cancelAll() {
+    m_queue.clear();
+    if (m_pProcess) {
+        // Detach first so the kill doesn't re-enter onProcessFinished().
+        m_pProcess->disconnect(this);
+        m_pProcess->kill();
+        m_pProcess->deleteLater();
+        m_pProcess = nullptr;
+    }
+    m_busy = false;
+    m_done = 0;
+    m_total = 0;
+    if (m_pProgress) {
+        m_pProgress->hide();
+    }
+    emit queueEmpty();
 }
 
 void StemConverter::onProcessFinished(int exitCode, QProcess::ExitStatus) {
@@ -86,6 +140,9 @@ void StemConverter::onProcessFinished(int exitCode, QProcess::ExitStatus) {
     }
     m_done++;
     emit progress(m_done, m_total);
+    if (m_pProgress) {
+        m_pProgress->setValue(m_done);
+    }
     if (m_pProcess) {
         m_pProcess->deleteLater();
         m_pProcess = nullptr;

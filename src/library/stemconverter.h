@@ -7,6 +7,7 @@
 
 #include "library/trackset/crate/crateid.h"
 
+class QProgressDialog;
 class TrackCollectionManager;
 
 /// Runs the external Demucs stem converter for queued tracks ONE AT A TIME, so
@@ -37,6 +38,8 @@ class StemConverter : public QObject {
 
   private slots:
     void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
+    /// Abort the whole queue (triggered by the progress window's Cancel button).
+    void cancelAll();
 
   private:
     struct Job {
@@ -47,9 +50,11 @@ class StemConverter : public QObject {
         QString title;
     };
     void startNext();
+    void showProgress();
 
     TrackCollectionManager* const m_pTrackCollectionManager;
     QProcess* m_pProcess;
+    QProgressDialog* m_pProgress;
     QList<Job> m_queue;
     Job m_current;
     bool m_busy;
