@@ -6,6 +6,7 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
+#include <QProcess>
 #include <QStandardPaths>
 #include <algorithm>
 #include <vector>
@@ -143,6 +144,12 @@ void CrateFeature::initActions() {
             &QAction::triggered,
             this,
             &CrateFeature::slotExportAllCratesToRekordbox);
+    m_pGenerateStemsAction =
+            make_parented<QAction>(tr("Generate stems (Demucs)…"), this);
+    connect(m_pGenerateStemsAction.get(),
+            &QAction::triggered,
+            this,
+            &CrateFeature::slotGenerateStems);
 #ifdef __ENGINEPRIME__
     m_pExportAllCratesAction = make_parented<QAction>(tr("Export to Engine DJ"), this);
     connect(m_pExportAllCratesAction.get(),
@@ -429,6 +436,8 @@ void CrateFeature::onRightClickChild(
 #ifdef __ENGINEPRIME__
     menu.addAction(m_pExportCrateAction.get());
 #endif
+    menu.addSeparator();
+    menu.addAction(m_pGenerateStemsAction.get());
     menu.exec(globalPos);
 }
 
@@ -998,6 +1007,49 @@ void CrateFeature::slotExportAllCratesToRekordbox() {
         return;
     }
     runRekordboxExport(m_pConfig, playlists);
+}
+
+void CrateFeature::slotGenerateStems() {
+    const CrateId crateId = crateIdFromIndex(m_lastRightClickedIndex);
+    Crate crate;
+    if (!m_pTrackCollection->crates().readCrateById(crateId, &crate)) {
+        return;
+    }
+    const QString crateName = crate.getName();
+
+    const auto answer = QMessageBox::question(nullptr,
+            tr("Generate stems"),
+            tr("Run Demucs stem separation for all tracks in crate \"%1\"?\n\n"
+               "It runs in a separate console window and can take several minutes "
+               "per track (already-converted tracks are skipped). Mixxx stays "
+               "usable in the meantime.")
+                    .arg(crateName),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+    if (answer != QMessageBox::Yes) {
+        return;
+    }
+
+    // The heavy lifting is done by the external Demucs batch converter
+    // (custom-build/batch2stem.py); Mixxx just launches it in its own console
+    // window so it can't block the UI. These paths are for this build's machine
+    // — adjust here if the stem-tools location changes.
+    const QString python = QStringLiteral(
+            "C:\\mixxx-build\\stem-tools\\venv\\Scripts\\python.exe");
+    const QString script = QStringLiteral(
+            "C:\\mixxx-build\\stem-tools\\batch2stem.py");
+
+    QStringList args;
+    args << QStringLiteral("/c") << QStringLiteral("start")
+         << QStringLiteral("Mixxx Stem Conversion")
+         << QStringLiteral("cmd") << QStringLiteral("/k")
+         << python << script << QStringLiteral("--crate") << crateName;
+
+    if (!QProcess::startDetached(QStringLiteral("cmd.exe"), args)) {
+        QMessageBox::warning(nullptr,
+                tr("Generate stems"),
+                tr("Could not launch the stem converter:\n%1").arg(python));
+    }
 }
 
 void CrateFeature::storePrevSiblingCrateId(CrateId crateId) {
