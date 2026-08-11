@@ -199,6 +199,20 @@ PORTABLES CUSTOM-MIXXX-PAKET
 Starten:  Doppelklick auf  "Custom Mixxx.exe"
           (Alternative: run-mixxx.bat - macht dasselbe)
 
+BEIM ERSTEN START meldet Windows evtl. "Der Computer wurde geschuetzt"
+  (SmartScreen) bzw. "nicht vertrauenswuerdige Quelle". Das ist bei freier,
+  nicht signierter Software NORMAL - so kommst du durch:
+    -> "Weitere Informationen" -> "Trotzdem ausfuehren".
+  Am besten VOR dem Entpacken die heruntergeladene ZIP entsperren:
+    Rechtsklick auf die ZIP -> Eigenschaften -> unten "Zulassen" ankreuzen -> OK,
+    danach entpacken. Dann bleiben alle Warnungen aus.
+  (Nachtraeglich fuer den ganzen Ordner in PowerShell:
+    Get-ChildItem -Recurse | Unblock-File )
+
+WICHTIG bei Uebertragung ueber Netzlaufwerk/Fileserver: NICHT den entpackten
+  Ordner kopieren (Antivirus kann dabei die python.exe der Stem-Tools loeschen).
+  Stattdessen die ZIP uebertragen und erst am Ziel-PC entpacken.
+
 VORAUSSETZUNG am Ziel-PC:
   Windows 10 oder 11 (64-bit). Dann laeuft das Paket OHNE weitere Installation -
   die noetigen MSVC-Runtime-DLLs liegen bereits im Ordner app\ .
