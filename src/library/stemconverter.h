@@ -38,6 +38,7 @@ class StemConverter : public QObject {
 
   private slots:
     void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
+    void onErrorOccurred(QProcess::ProcessError error);
     /// Abort the whole queue (triggered by the progress window's Cancel button).
     void cancelAll();
 
@@ -51,13 +52,17 @@ class StemConverter : public QObject {
     };
     void startNext();
     void showProgress();
+    /// Count the current job as done, advance the bar and start the next one.
+    void finishJob();
 
     TrackCollectionManager* const m_pTrackCollectionManager;
     QProcess* m_pProcess;
     QProgressDialog* m_pProgress;
     QList<Job> m_queue;
     Job m_current;
+    QString m_logPath;
     bool m_busy;
     int m_done;
     int m_total;
+    int m_failed;
 };
