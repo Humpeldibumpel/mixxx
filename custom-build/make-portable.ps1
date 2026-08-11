@@ -179,15 +179,25 @@ echo Starte Custom Mixxx (portable) ...
 "%BASE%app\mixxx.exe" --settingsPath "%BASEFWD%config" --resourcePath "%BASEFWD%res" %*
 endlocal
 '@
-$launcherPath = Join-Path $Dest "run-mixxx.bat"
-Set-Content -Path $launcherPath -Value $launcher -Encoding ASCII
+$batPath = Join-Path $Dest "run-mixxx.bat"
+Set-Content -Path $batPath -Value $launcher -Encoding ASCII
+$launcherPath = $batPath
+# Prefer the native .exe launcher (friendlier + no console flash) if prebuilt.
+# Falls back to run-mixxx.bat, which stays as an alternative in the package.
+$launcherExe = Join-Path $Src "launcher\Custom Mixxx.exe"
+if (Test-Path $launcherExe) {
+    Copy-Item $launcherExe (Join-Path $Dest "Custom Mixxx.exe") -Force
+    $launcherPath = Join-Path $Dest "Custom Mixxx.exe"
+    Write-Host "[*] Nativer Launcher 'Custom Mixxx.exe' eingepackt." -ForegroundColor Green
+}
 
 # --- LIESMICH ---------------------------------------------------------------
 $readme = @'
 PORTABLES CUSTOM-MIXXX-PAKET
 ============================
 
-Starten:  Doppelklick auf  run-mixxx.bat
+Starten:  Doppelklick auf  "Custom Mixxx.exe"
+          (Alternative: run-mixxx.bat - macht dasselbe)
 
 VORAUSSETZUNG am Ziel-PC:
   Windows 10 oder 11 (64-bit). Dann laeuft das Paket OHNE weitere Installation -
@@ -205,7 +215,7 @@ Ordner:
            falls nicht mitkopiert)
 
 Das Paket laeuft aus jedem Pfad (USB-Stick, anderer Laufwerksbuchstabe) -
-run-mixxx.bat benutzt relative Pfade.
+der Launcher benutzt relative Pfade.
 '@
 Set-Content -Path (Join-Path $Dest "LIESMICH.txt") -Value $readme -Encoding ASCII
 
