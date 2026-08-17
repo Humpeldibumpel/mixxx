@@ -111,16 +111,21 @@ foreach ($s in @("build-mixxx.bat", "make-portable.ps1", "link-mixxx.bat")) {
 Write-Host "`n=== FERTIG (automatischer Teil) ===" -ForegroundColor Cyan
 Write-Host "Noch von Hand:" -ForegroundColor Yellow
 Write-Host "  1. Visual Studio 2022+ mit 'Desktop development with C++' installieren (bringt CMake + Ninja)." -ForegroundColor Yellow
+# "-products *" ist noetig: ohne das liefert vswhere nur vollwertige VS-IDE-
+# Installationen und blendet Build Tools aus - dann kommt hier nichts zurueck.
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
 if (Test-Path $vswhere) {
-    $vs = & $vswhere -latest -property installationPath 2>$null
+    $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
     if ($vs) {
-        Write-Host "  2. In $Root\build-mixxx.bat den VsDevCmd-Pfad setzen auf:" -ForegroundColor Yellow
-        Write-Host "       `"$vs\Common7\Tools\VsDevCmd.bat`"" -ForegroundColor Yellow
+        Write-Host "     Gefunden: $vs" -ForegroundColor Green
+        Write-Host "     build-mixxx.bat findet das selbst - kein manueller Eintrag noetig." -ForegroundColor Green
+    } else {
+        Write-Host "     WARNUNG: keine VS-Installation mit C++-Workload gefunden." -ForegroundColor Red
     }
 } else {
-    Write-Host "  2. In $Root\build-mixxx.bat den VsDevCmd-Pfad auf deine VS-Installation anpassen." -ForegroundColor Yellow
+    Write-Host "     WARNUNG: vswhere.exe fehlt - VS ist vermutlich nicht installiert." -ForegroundColor Red
 }
-Write-Host "  3. Optional: 'config-isolated' vom alten PC nach $Root\config-isolated kopieren (Test-Library/Mapping)." -ForegroundColor Yellow
-Write-Host "  4. Bauen:  $Root\build-mixxx.bat   (erster Build laedt die buildenv-Deps und dauert lange)." -ForegroundColor Yellow
-Write-Host "  5. Das Demucs-Modell (~80 MB) laedt beim ersten Stem-Erzeugen automatisch (einmal Internet noetig)." -ForegroundColor Yellow
+Write-Host "  2. Optional: 'config-isolated' vom alten PC nach $Root\config-isolated kopieren (Test-Library/Mapping)." -ForegroundColor Yellow
+Write-Host "  3. Bauen:  $Root\build-mixxx.bat   (erster Build laedt die buildenv-Deps und dauert lange)." -ForegroundColor Yellow
+Write-Host "     Den ERSTEN Build in einem echten Konsolenfenster starten - siehe NEW-PC-SETUP.md." -ForegroundColor Yellow
+Write-Host "  4. Das Demucs-Modell (~80 MB) laedt beim ersten Stem-Erzeugen automatisch (einmal Internet noetig)." -ForegroundColor Yellow

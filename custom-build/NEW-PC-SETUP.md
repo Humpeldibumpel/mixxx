@@ -39,14 +39,27 @@ The script (idempotent — safe to re-run):
 
 ## 3. Manual steps the script can't do
 
-1. **Set the Visual Studio path** in `C:\mixxx-build\build-mixxx.bat` — the line
-   that calls `VsDevCmd.bat`. The script prints the detected path for you to paste.
-2. *(Optional)* copy your personal **`config-isolated`** folder from the old PC to
+1. *(Optional)* copy your personal **`config-isolated`** folder from the old PC to
    `C:\mixxx-build\config-isolated` — your test library, DDJ-RR mapping and
    settings. This is **not** in git. (Its library points at `C:\Alex\Musik\…`;
    adjust if the music lives elsewhere on the new PC.)
-3. **Build:** run `C:\mixxx-build\build-mixxx.bat`. The first build downloads the
-   `buildenv` dependencies and takes a while.
+2. **Build:** run `C:\mixxx-build\build-mixxx.bat`. It locates Visual Studio via
+   `vswhere` on its own — set the `VSDEVCMD` environment variable only if you
+   need to override that. The first build fetches the `buildenv` dependencies
+   (~2 GB download, ~8 GB unpacked) and takes a while.
+
+   > **Run the first build in an interactive console window.** With 7-Zip absent,
+   > `tools\windows_buildenv.bat` unpacks the dependency archive through a nested
+   > `powershell.exe`, and that nested process never starts when the build runs
+   > detached with no console attached — it then sits at 0 % indefinitely instead
+   > of failing. Installing **7-Zip** avoids the powershell path entirely and is
+   > the more robust option if you build from a script or CI.
+
+### Disk space
+
+Budget about **20 GB free** on `C:` for the first build: ~8 GB unpacked
+`buildenv`, ~2 GB for the archive until it is deleted after unpacking, and
+~3.5 GB for the `RelWithDebInfo` build tree including PDBs.
 
 ## 4. Notes
 
