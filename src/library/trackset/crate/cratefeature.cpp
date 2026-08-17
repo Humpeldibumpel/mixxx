@@ -133,13 +133,13 @@ void CrateFeature::initActions() {
             this,
             &CrateFeature::slotExportTrackFiles);
     m_pExportRekordboxAction =
-            make_parented<QAction>(tr("Export to rekordbox (USB)…"), this);
+            make_parented<QAction>(tr("Export to rekordbox (XML)…"), this);
     connect(m_pExportRekordboxAction.get(),
             &QAction::triggered,
             this,
             &CrateFeature::slotExportToRekordbox);
     m_pExportAllCratesRekordboxAction =
-            make_parented<QAction>(tr("Export all Crates to rekordbox (USB)…"), this);
+            make_parented<QAction>(tr("Export all Crates to rekordbox (XML)…"), this);
     connect(m_pExportAllCratesRekordboxAction.get(),
             &QAction::triggered,
             this,
@@ -940,7 +940,10 @@ void runRekordboxExport(
             "Hot cues: %3 · Loops: %4 · Memory cues: %5\n\n"
             "In rekordbox: Preferences → Advanced → rekordbox xml → select "
             "rekordbox.xml, enable the \"rekordbox xml\" view, then import the "
-            "playlist.")
+            "playlist.\n\n"
+            "To play on CDJ/XDJ players: after importing, use rekordbox's own "
+            "\"Export to Device\" to write the USB. This XML is not a "
+            "CDJ-readable device database by itself.")
             .arg(QString::number(res.tracks),
                     QDir::toNativeSeparators(targetDir + "/rekordbox.xml"),
                     QString::number(res.hotcues),
