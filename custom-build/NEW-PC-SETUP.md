@@ -32,7 +32,8 @@ The script (idempotent — safe to re-run):
 - creates a **fresh** `stem-tools` venv and installs **demucs + CPU torch + numpy**
   (a fresh venv is far more reliable than copying one between PCs)
 - downloads **ffmpeg** into `stem-tools\ffmpeg`
-- copies the helper scripts (`build-mixxx.bat`, `make-portable.ps1`) into `C:\mixxx-build`
+- copies the helper scripts (`build-mixxx.bat`, `link-mixxx.bat`, `make-portable.ps1`,
+  `run-mixxx-custom.bat`) into `C:\mixxx-build`
 
 > Keep the default root `C:\mixxx-build`. The `.bat` helpers contain hard-coded
 > `C:\mixxx-build` paths; a different root means editing them.
@@ -65,8 +66,12 @@ Budget about **20 GB free** on `C:` for the first build: ~8 GB unpacked
 
 - The **Demucs model** (~80 MB) downloads automatically the first time you
   generate stems (needs internet once). After that it works offline.
-- **Run the build:** `C:\mixxx-build\run-mixxx-custom.bat` (uses the isolated
-  `config-isolated`, not your normal Mixxx profile).
+- **Run the build:** `C:\mixxx-build\run-mixxx-custom.bat` starts `build\mixxx.exe`
+  against `config-isolated` — never your normal Mixxx profile, because this build
+  upgrades `mixxxdb.sqlite` to the 2.7 schema and stable Mixxx cannot read the
+  library afterwards. The script creates the profile directory when it is missing,
+  so the first start comes up with an empty library until you copy your own
+  `config-isolated` over from the other PC.
 
 ## Everyday workflow (across both PCs)
 

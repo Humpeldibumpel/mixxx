@@ -102,7 +102,7 @@ if (Get-ChildItem $ff -Recurse -Filter ffmpeg.exe -ErrorAction SilentlyContinue)
 }
 
 # --- Helfer-Skripte in den Root (gleiche Struktur wie Dev-PC) --------------
-foreach ($s in @("build-mixxx.bat", "make-portable.ps1", "link-mixxx.bat")) {
+foreach ($s in @("build-mixxx.bat", "make-portable.ps1", "link-mixxx.bat", "run-mixxx-custom.bat")) {
     $src = Join-Path $repo "custom-build\$s"
     if (Test-Path $src) { Copy-Item $src $Root -Force }
 }
