@@ -108,6 +108,21 @@ TRACK_STRING_COUNT = 21
 _TRACK_FIXED = "<HHIIIIIHHIIIIIIIIIIIIHHHHHHBBHH"
 
 
+def _u(value, bits, name):
+    """Coerce to an unsigned int that fits the field.
+
+    Several Mixxx columns are varchar even when they hold numbers, so a stray
+    string here would otherwise surface as a bare struct.error in the middle of
+    an export. Clamp rather than truncate: a wrong-but-valid value beats a
+    corrupt row, and out-of-range input is a data problem, not a format one.
+    """
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        raise ValueError("track field %r is not a number: %r" % (name, value))
+    return max(0, min(n, (1 << bits) - 1))
+
+
 def row_track(t):
     """Build a track row.
 
@@ -118,35 +133,35 @@ def row_track(t):
         _TRACK_FIXED,
         0x24,                      # unknown, matches what rekordbox writes
         0,                         # index_shift, filled in by Page.render()
-        t.get("bitmask", 0x000C0700),
-        t["sample_rate"],
-        t.get("composer_id", 0),
-        t["file_size"],
+        _u(t.get("bitmask", 0x000C0700), 32, "bitmask"),
+        _u(t["sample_rate"], 32, "sample_rate"),
+        _u(t.get("composer_id", 0), 32, "composer_id"),
+        _u(t["file_size"], 32, "file_size"),
         # A per-track u4 sits here (observed 0x01188414, 0x09452ed2, 0x02f0ab71,
         # 0x0186e16e). Its derivation is unknown, and a fabricated value is no
         # safer than zero.
         0,
         51096, 60247,              # observed constants; the ksy lists stale ones
-        t.get("artwork_id", 0),
-        t.get("key_id", 0),
-        t.get("original_artist_id", 0),
-        t.get("label_id", 0),
-        t.get("remixer_id", 0),
-        t.get("bitrate", 0),
-        t.get("track_number", 0),
-        t["tempo"],                # bpm * 100
-        t.get("genre_id", 0),
-        t.get("album_id", 0),
-        t.get("artist_id", 0),
-        t["id"],
-        t.get("disc_number", 0),
-        t.get("play_count", 0),
-        t.get("year", 0),
-        t.get("sample_depth", 16),
-        t["duration"],
+        _u(t.get("artwork_id", 0), 32, "artwork_id"),
+        _u(t.get("key_id", 0), 32, "key_id"),
+        _u(t.get("original_artist_id", 0), 32, "original_artist_id"),
+        _u(t.get("label_id", 0), 32, "label_id"),
+        _u(t.get("remixer_id", 0), 32, "remixer_id"),
+        _u(t.get("bitrate", 0), 32, "bitrate"),
+        _u(t.get("track_number", 0), 32, "track_number"),
+        _u(t["tempo"], 32, "tempo"),               # bpm * 100
+        _u(t.get("genre_id", 0), 32, "genre_id"),
+        _u(t.get("album_id", 0), 32, "album_id"),
+        _u(t.get("artist_id", 0), 32, "artist_id"),
+        _u(t["id"], 32, "id"),
+        _u(t.get("disc_number", 0), 16, "disc_number"),
+        _u(t.get("play_count", 0), 16, "play_count"),
+        _u(t.get("year", 0), 16, "year"),
+        _u(t.get("sample_depth", 16), 16, "sample_depth"),
+        _u(t["duration"], 16, "duration"),
         41,                        # unknown u2, constant in the reference
-        t.get("color_id", 0),
-        t.get("rating", 0),
+        _u(t.get("color_id", 0), 8, "color_id"),
+        _u(t.get("rating", 0), 8, "rating"),
         1, 3,                      # observed; the ksy calls the second 2 or 3
     )
     header_len = len(fixed) + 2 * TRACK_STRING_COUNT

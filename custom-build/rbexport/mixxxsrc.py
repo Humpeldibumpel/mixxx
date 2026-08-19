@@ -125,6 +125,38 @@ class Cue:
         return (self.position + (self.length or 0)) / (2.0 * samplerate)
 
 
+def leading_int(value, default=0):
+    """Coerce a Mixxx text field to an int.
+
+    `year` and `tracknumber` are varchar columns, so they arrive as strings and
+    are not necessarily plain numbers - tags carry things like "2011-11-08",
+    "20111108" or "3/12". Take the leading digit run and let the caller clamp.
+    """
+    if value is None:
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    digits = ""
+    for ch in str(value).strip():
+        if not ch.isdigit():
+            break
+        digits += ch
+    return int(digits) if digits else default
+
+
+def parse_year(value):
+    """A four-digit year, even when the tag holds a full date."""
+    n = leading_int(value)
+    if n > 99999999:
+        return 0
+    if n > 9999:                 # 20111108 or 201111 -> 2011
+        while n > 9999:
+            n //= 100 if n > 999999 else 10
+    return n if n <= 0xFFFF else 0
+
+
 def open_library(db_path):
     """Copy the DB aside so we can read it while Mixxx holds it open."""
     tmp = os.path.join(tempfile.gettempdir(), "mixxx_rbexport_copy.sqlite")
@@ -161,10 +193,10 @@ def load_track(con, track_id):
     t = Track(
         id=r["id"], artist=r["artist"] or "", title=r["title"] or os.path.basename(r["location"]),
         album=r["album"] or "", genre=r["genre"] or "", comment=r["comment"] or "",
-        year=r["year"] or 0, duration=int(round(r["duration"] or 0)),
-        bitrate=r["bitrate"] or 0, samplerate=sr, bpm=r["bpm"] or 0.0,
+        year=parse_year(r["year"]), duration=int(round(r["duration"] or 0)),
+        bitrate=int(r["bitrate"] or 0), samplerate=sr, bpm=float(r["bpm"] or 0.0),
         key=r["key"] or "", filetype=(r["filetype"] or "").lower(),
-        tracknumber=r["tracknumber"], location=r["location"],
+        tracknumber=leading_int(r["tracknumber"]), location=r["location"],
         filesize=os.path.getsize(r["location"]), color=r["color"],
         rating=r["rating"] or 0,
         beats=parse_beats(r["beats"], r["beats_version"], sr),

@@ -144,9 +144,13 @@ void RekordboxDeviceExport::onErrorOccurred(int error) {
 void RekordboxDeviceExport::onFinished(int exitCode, int exitStatus) {
     const bool ok = exitCode == 0 &&
             static_cast<QProcess::ExitStatus>(exitStatus) == QProcess::NormalExit;
+    // Read the flag BEFORE cleanUp(): closing a QProgressDialog makes it emit
+    // canceled() itself, which would otherwise set m_cancelled right here and
+    // turn every finished export into a "cancelled" report.
+    const bool wasCancelled = m_cancelled;
     cleanUp();
 
-    if (m_cancelled) {
+    if (wasCancelled) {
         QMessageBox::information(nullptr,
                 tr("Export to rekordbox (USB device)"),
                 tr("Export cancelled. The target folder may contain a partial "
@@ -180,6 +184,8 @@ void RekordboxDeviceExport::onFinished(int exitCode, int exitStatus) {
 
 void RekordboxDeviceExport::cleanUp() {
     if (m_pProgress) {
+        // Disconnect first: close() emits canceled().
+        m_pProgress->disconnect(this);
         m_pProgress->close();
         m_pProgress->deleteLater();
         m_pProgress = nullptr;
