@@ -1240,6 +1240,7 @@ add_library(
   src/library/dlgtrackmetadataexport.cpp
   src/library/export/coverartcopyworker.cpp
   src/library/export/dlgtrackexport.ui
+  src/library/export/rekordboxdeviceexport.cpp
   src/library/export/rekordboxexport.cpp
   src/library/export/trackexportdlg.cpp
   src/library/export/trackexportwizard.cpp

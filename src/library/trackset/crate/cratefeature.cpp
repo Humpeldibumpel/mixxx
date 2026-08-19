@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "analyzer/analyzerscheduledtrack.h"
+#include "library/export/rekordboxdeviceexport.h"
 #include "library/export/rekordboxexport.h"
 #include "library/export/trackexportwizard.h"
 #include "library/library.h"
@@ -144,6 +145,12 @@ void CrateFeature::initActions() {
             &QAction::triggered,
             this,
             &CrateFeature::slotExportAllCratesToRekordbox);
+    m_pExportRekordboxDeviceAction =
+            make_parented<QAction>(tr("Export to rekordbox (USB device)…"), this);
+    connect(m_pExportRekordboxDeviceAction.get(),
+            &QAction::triggered,
+            this,
+            &CrateFeature::slotExportToRekordboxDevice);
     m_pGenerateStemsAction =
             make_parented<QAction>(tr("Generate stems (Demucs)…"), this);
     connect(m_pGenerateStemsAction.get(),
@@ -433,6 +440,7 @@ void CrateFeature::onRightClickChild(
     menu.addAction(m_pExportPlaylistAction.get());
     menu.addAction(m_pExportTrackFilesAction.get());
     menu.addAction(m_pExportRekordboxAction.get());
+    menu.addAction(m_pExportRekordboxDeviceAction.get());
 #ifdef __ENGINEPRIME__
     menu.addAction(m_pExportCrateAction.get());
 #endif
@@ -990,6 +998,59 @@ void CrateFeature::slotExportToRekordbox() {
     QList<QPair<QString, QList<TrackPointer>>> playlists;
     playlists.append(qMakePair(crate.getName(), tracks));
     runRekordboxExport(m_pConfig, playlists);
+}
+
+void CrateFeature::slotExportToRekordboxDevice() {
+    const CrateId crateId = crateIdFromIndex(m_lastRightClickedIndex);
+    Crate crate;
+    if (!m_pTrackCollection->crates().readCrateById(crateId, &crate)) {
+        return;
+    }
+    const QList<TrackPointer> tracks = collectCrateTracks(crateId);
+    if (tracks.isEmpty()) {
+        QMessageBox::information(nullptr,
+                tr("Export to rekordbox (USB device)"),
+                tr("This crate has no tracks to export."));
+        return;
+    }
+
+    const QString lastDir = m_pConfig->getValue(
+            kConfigKeyLastImportExportCrateDirectoryKey,
+            QStandardPaths::writableLocation(QStandardPaths::MusicLocation));
+    const QString targetDir = QFileDialog::getExistingDirectory(nullptr,
+            tr("Export to rekordbox — choose the USB drive"),
+            lastDir);
+    if (targetDir.isEmpty()) {
+        return;
+    }
+    m_pConfig->set(kConfigKeyLastImportExportCrateDirectoryKey,
+            ConfigValue(targetDir));
+
+    // The audio is copied to the drive and the analysis runs per track, so this
+    // takes a while and needs real space. Say so before starting.
+    const auto answer = QMessageBox::question(nullptr,
+            tr("Export to rekordbox (USB device)"),
+            tr("Write a CDJ-readable rekordbox export of \"%1\" (%2 tracks) to:\n%3\n\n"
+               "The audio files are copied to the drive and analysed one by one, "
+               "which takes a few seconds per track. Existing PIONEER data on the "
+               "drive will be overwritten.")
+                    .arg(crate.getName(),
+                            QString::number(tracks.size()),
+                            QDir::toNativeSeparators(targetDir)),
+            QMessageBox::Ok | QMessageBox::Cancel,
+            QMessageBox::Ok);
+    if (answer != QMessageBox::Ok) {
+        return;
+    }
+
+    const QString dbPath =
+            m_pConfig->getSettingsPath() + QStringLiteral("/mixxxdb.sqlite");
+
+    // Owns itself: it deletes itself once the process finishes.
+    auto* pExport = new mixxx::RekordboxDeviceExport(this);
+    if (!pExport->start(dbPath, targetDir, {crateId.toVariant().toInt()}, tracks.size())) {
+        pExport->deleteLater();
+    }
 }
 
 void CrateFeature::slotExportAllCratesToRekordbox() {

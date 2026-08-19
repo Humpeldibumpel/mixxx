@@ -73,6 +73,8 @@ class CrateFeature : public BaseTrackSetFeature {
     void slotExportToRekordbox();
     // Export every crate to a rekordbox XML (one playlist per crate).
     void slotExportAllCratesToRekordbox();
+    // Write a CDJ-readable rekordbox device export (export.pdb + ANLZ) to a USB.
+    void slotExportToRekordboxDevice();
     // Run the external Demucs stem converter for this crate.
     void slotGenerateStems();
     void slotAnalyzeCrate();
@@ -136,6 +138,7 @@ class CrateFeature : public BaseTrackSetFeature {
     parented_ptr<QAction> m_pExportTrackFilesAction;
     parented_ptr<QAction> m_pExportRekordboxAction;
     parented_ptr<QAction> m_pExportAllCratesRekordboxAction;
+    parented_ptr<QAction> m_pExportRekordboxDeviceAction;
     parented_ptr<QAction> m_pGenerateStemsAction;
 #ifdef __ENGINEPRIME__
     parented_ptr<QAction> m_pExportAllCratesAction;

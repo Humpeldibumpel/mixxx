@@ -87,6 +87,14 @@ foreach ($s in @("song2stem.py", "batch2stem.py")) {
     $src = Join-Path $repo "custom-build\$s"
     if (Test-Path $src) { Copy-Item $src $stem -Force }
 }
+# rbexport (rekordbox-USB-Export) teilt sich venv und ffmpeg mit den Stem-Tools,
+# deshalb liegt es daneben - dort sucht Mixxx es auch.
+$rbSrc = Join-Path $repo "custom-build\rbexport"
+if (Test-Path $rbSrc) {
+    $rbDst = Join-Path $stem "rbexport"
+    New-Item -ItemType Directory -Force $rbDst | Out-Null
+    Copy-Item (Join-Path $rbSrc "*.py") $rbDst -Force
+}
 
 # --- 3) ffmpeg (essentials) neben die Skripte ------------------------------
 $ff = Join-Path $stem "ffmpeg"
