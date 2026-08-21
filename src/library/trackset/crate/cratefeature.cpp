@@ -1017,12 +1017,39 @@ void CrateFeature::slotExportToRekordboxDevice() {
     const QString lastDir = m_pConfig->getValue(
             kConfigKeyLastImportExportCrateDirectoryKey,
             QStandardPaths::writableLocation(QStandardPaths::MusicLocation));
-    const QString targetDir = QFileDialog::getExistingDirectory(nullptr,
+    QString targetDir = QFileDialog::getExistingDirectory(nullptr,
             tr("Export to rekordbox — choose the USB drive"),
             lastDir);
     if (targetDir.isEmpty()) {
         return;
     }
+
+    // A player expects PIONEER/ and Contents/ at the root of the drive. Picking
+    // the PIONEER folder itself is an easy mistake in the folder dialog and
+    // produces a stick that looks correct but that no player can read, so catch
+    // it here rather than letting it fail silently on the gear.
+    QDir chosen(targetDir);
+    const QString leaf = chosen.dirName();
+    if (leaf.compare(QStringLiteral("PIONEER"), Qt::CaseInsensitive) == 0 ||
+            leaf.compare(QStringLiteral("Contents"), Qt::CaseInsensitive) == 0 ||
+            leaf.compare(QStringLiteral("rekordbox"), Qt::CaseInsensitive) == 0) {
+        QDir parent(chosen);
+        parent.cdUp();
+        const auto fix = QMessageBox::question(nullptr,
+                tr("Export to rekordbox (USB device)"),
+                tr("You picked the \"%1\" folder. Players expect PIONEER and Contents "
+                   "at the top level of the drive, so exporting here would produce a "
+                   "stick that no player can read.\n\n"
+                   "Export to %2 instead?")
+                        .arg(leaf, QDir::toNativeSeparators(parent.absolutePath())),
+                QMessageBox::Yes | QMessageBox::No,
+                QMessageBox::Yes);
+        if (fix != QMessageBox::Yes) {
+            return;
+        }
+        targetDir = parent.absolutePath();
+    }
+
     m_pConfig->set(kConfigKeyLastImportExportCrateDirectoryKey,
             ConfigValue(targetDir));
 

@@ -103,6 +103,89 @@ def row_playlist_entry(entry_index, track_id, playlist_id):
     return struct.pack("<III", entry_index, track_id, playlist_id)
 
 
+# --- browse menu vocabulary -------------------------------------------------
+# Tables 16/17/18 describe the player's browse categories: 16 names them, 17 and
+# 18 carry a visibility flag and a display order for the browse and sort menus.
+# A real export always fills them; we left them empty, which is the leading
+# suspect for a player showing an otherwise valid library as empty.
+#
+# The rows are reproduced verbatim from a rekordbox 6 export. They are entirely
+# track-independent - no ids, paths or names of the exported library appear in
+# them - so copying them is safe. Their internal meaning is only partly
+# understood, which is exactly why they are copied rather than modelled.
+
+# (column_id, menu_id, label)
+COLUMN_DEFS = [
+    (0x01, 0x80, "GENRE"), (0x02, 0x81, "ARTIST"), (0x03, 0x82, "ALBUM"),
+    (0x04, 0x83, "TRACK"), (0x05, 0x85, "BPM"), (0x06, 0x86, "RATING"),
+    (0x07, 0x87, "YEAR"), (0x08, 0x88, "REMIXER"), (0x09, 0x89, "LABEL"),
+    (0x0A, 0x8A, "ORIGINAL ARTIST"), (0x0B, 0x8B, "KEY"), (0x0C, 0x8D, "CUE"),
+    (0x0D, 0x8E, "COLOR"), (0x0E, 0x92, "TIME"), (0x0F, 0x93, "BITRATE"),
+    (0x10, 0x94, "FILE NAME"), (0x11, 0x84, "PLAYLIST"),
+    (0x12, 0x98, "HOT CUE BANK"), (0x13, 0x95, "HISTORY"),
+    (0x14, 0x91, "SEARCH"), (0x15, 0x96, "COMMENTS"),
+    (0x16, 0x8C, "DATE ADDED"), (0x17, 0x97, "DJ PLAY COUNT"),
+    (0x18, 0x90, "FOLDER"), (0x19, 0xA1, "DEFAULT"),
+    (0x1A, 0xA2, "ALPHABET"), (0x1B, 0xAA, "MATCHING"),
+]
+
+# Tables 17 and 18, one 8-byte row each: column_id, menu_id, and two bytes plus
+# an order word whose exact semantics are not derived.
+MENU_ROWS_17 = [
+    (0x01, 0x01, 0x63, 1, 0), (0x05, 0x06, 0x05, 1, 0), (0x06, 0x07, 0x63, 1, 0),
+    (0x07, 0x08, 0x63, 1, 0), (0x08, 0x09, 0x63, 1, 0), (0x09, 0x0A, 0x63, 1, 0),
+    (0x0A, 0x0B, 0x63, 1, 0), (0x0D, 0x0F, 0x63, 1, 0), (0x0E, 0x13, 0x04, 1, 0),
+    (0x0F, 0x14, 0x06, 1, 0), (0x10, 0x15, 0x63, 1, 0), (0x12, 0x17, 0x63, 1, 0),
+    (0x02, 0x02, 0x02, 0, 1), (0x03, 0x03, 0x03, 0, 2), (0x04, 0x04, 0x01, 0, 3),
+    (0x0B, 0x0C, 0x63, 0, 4), (0x11, 0x05, 0x63, 0, 5), (0x13, 0x16, 0x63, 0, 6),
+    (0x14, 0x12, 0x63, 0, 7), (0x1B, 0x1A, 0x63, 2, 8), (0x18, 0x11, 0x63, 0, 9),
+    (0x16, 0x1B, 0x63, 0, 10),
+]
+
+MENU_ROWS_18 = [
+    (0x01, 0x06, 0x01, 0, 0), (0x15, 0x07, 0x01, 0, 0), (0x0E, 0x08, 0x01, 0, 0),
+    (0x08, 0x09, 0x01, 0, 0), (0x09, 0x0A, 0x01, 0, 0), (0x0A, 0x0B, 0x01, 0, 0),
+    (0x0F, 0x0D, 0x01, 0, 0), (0x0D, 0x0F, 0x01, 0, 0), (0x17, 0x10, 0x01, 0, 0),
+    (0x16, 0x11, 0x01, 0, 0), (0x19, 0x00, 0x00, 1, 0), (0x1A, 0x01, 0x00, 2, 0),
+    (0x02, 0x02, 0x00, 3, 0), (0x03, 0x03, 0x00, 4, 0), (0x05, 0x04, 0x00, 5, 0),
+    (0x06, 0x05, 0x00, 6, 0), (0x0B, 0x0C, 0x00, 7, 0),
+]
+
+# The eight rekordbox colour labels, in id order.
+COLOR_NAMES = ["Pink", "Red", "Orange", "Yellow", "Green", "Aqua", "Blue", "Purple"]
+
+
+def row_column(column_id, menu_id, label):
+    """columns: the two ids, then the label wrapped in U+FFFA / U+FFFB.
+
+    The reference always encodes these as 0x90 UTF-16LE, which dsql() picks
+    automatically because of the two non-ASCII delimiters.
+    """
+    # U+FFFA / U+FFFB are the interlinear annotation marks rekordbox uses as
+    # delimiters; written as escapes because they are invisible in an editor.
+    return struct.pack("<HH", column_id, menu_id) + dsql("￺" + label + "￻")
+
+
+def row_menu(column_id, menu_id, a, b, order):
+    return struct.pack("<HHBBH", column_id, menu_id, a, b, order)
+
+
+def column_rows():
+    return [row_column(c, m, label) for c, m, label in COLUMN_DEFS]
+
+
+def menu_rows_17():
+    return [row_menu(*r) for r in MENU_ROWS_17]
+
+
+def menu_rows_18():
+    return [row_menu(*r) for r in MENU_ROWS_18]
+
+
+def color_rows():
+    return [row_color(i, name) for i, name in enumerate(COLOR_NAMES, 1)]
+
+
 TRACK_STRING_COUNT = 21
 # Fixed part of a track row, before the 21 string offsets.
 _TRACK_FIXED = "<HHIIIIIHHIIIIIIIIIIIIHHHHHHBBHH"
@@ -215,6 +298,9 @@ class Page:
         self.index = index
         self.type = page_type
         self.rows = []
+        # Every page that belongs to a table chain carries a non-zero value
+        # here in a real export; zero marks a page that was never written.
+        self.sequence = 1
 
     def capacity_for(self, row):
         """Would `row` still fit, counting the index growth it causes?
@@ -253,7 +339,7 @@ class Page:
 
         num_rows = len(self.rows)
         struct.pack_into("<IIII", buf, 0, 0, self.index, self.type, next_page_index)
-        struct.pack_into("<I", buf, 16, 0)          # sequence
+        struct.pack_into("<I", buf, 16, self.sequence)
         struct.pack_into("<I", buf, 20, 0)
         buf[24] = min(num_rows, 0xFF)               # num_rows_small
         # u2 at 25 is 32 * the number of present rows in a real export.
@@ -290,6 +376,12 @@ class Page:
                 present |= 1 << slot
                 struct.pack_into("<H", buf, base - (6 + 2 * slot), offsets[idx])
             struct.pack_into("<H", buf, base - 4, present)
+            # The word right after the present mask is the mask of slots whose
+            # index is >= num_rows_large. We keep num_rows_large at 0 and never
+            # emit deletions, so it equals the present mask - which is what
+            # every reference page with those properties contains. Leaving it
+            # zero made our file contradict its own num_rows_small.
+            struct.pack_into("<H", buf, base - 2, present)
         return bytes(buf)
 
 
@@ -345,35 +437,69 @@ def build(tables):
                     next_index += 1
                 current.add(row)
             data_pages.append(current)
-        chains[ttype] = (head_index, data_pages)
+        # A table with no rows still gets one physically present, all-zero page
+        # that its empty_candidate points at - that is how a real export marks
+        # "nothing written here yet".
+        spare_index = None
+        if not data_pages:
+            spare_index = next_index
+            next_index += 1
+        chains[ttype] = (head_index, data_pages, spare_index)
 
-    total_pages = next_index
+    total_real_pages = next_index
+
+    # Sequence numbers run over the pages of every chain, in page order, and
+    # start above the value the leading pages carry.
+    seq = 2
+    for ttype in ALL_TABLES:
+        for page in chains[ttype][1]:
+            page.sequence = seq
+            seq += 1
+
+    # empty_candidate: for a populated table an index past the end of the file,
+    # for an empty one its spare page. Never zero, and next_unused_page sits
+    # above all of them.
+    candidates, past_eof = {}, total_real_pages
+    for ttype in ALL_TABLES:
+        _head, data_pages, spare_index = chains[ttype]
+        if data_pages:
+            candidates[ttype] = past_eof
+            past_eof += 1
+        else:
+            candidates[ttype] = spare_index
+    next_unused = max(max(candidates.values()) + 1, total_real_pages)
+
     out = bytearray()
 
     # --- file header page ---
     header = bytearray(PAGE_SIZE)
-    struct.pack_into("<IIII", header, 0, 0, PAGE_SIZE, len(ALL_TABLES), total_pages)
-    struct.pack_into("<I", header, 16, 0)
-    struct.pack_into("<I", header, 20, 1)          # sequence
+    struct.pack_into("<IIII", header, 0, 0, PAGE_SIZE, len(ALL_TABLES), next_unused)
+    struct.pack_into("<I", header, 16, 5)          # constant in every reference
+    struct.pack_into("<I", header, 20, seq + 1)   # above every page sequence
     struct.pack_into("<I", header, 24, 0)          # gap
     pos = 28
     for ttype in ALL_TABLES:
-        head_index, data_pages = chains[ttype]
+        head_index, data_pages, _spare = chains[ttype]
         last_index = data_pages[-1].index if data_pages else head_index
-        struct.pack_into("<IIII", header, pos, ttype, 0, head_index, last_index)
+        struct.pack_into("<IIII", header, pos, ttype, candidates[ttype],
+                         head_index, last_index)
         pos += 16
     out += header
 
     # --- table pages, in index order ---
     rendered = {}
     for ttype in ALL_TABLES:
-        head_index, data_pages = chains[ttype]
-        first_data = data_pages[0].index if data_pages else total_pages
+        head_index, data_pages, spare_index = chains[ttype]
+        first_data = data_pages[0].index if data_pages else candidates[ttype]
         rendered[head_index] = _leading_page(head_index, ttype, first_data,
                                              is_terminal=not data_pages)
         for i, page in enumerate(data_pages):
-            nxt = data_pages[i + 1].index if i + 1 < len(data_pages) else total_pages
+            # The last page of a chain links to the table's empty_candidate.
+            nxt = (data_pages[i + 1].index if i + 1 < len(data_pages)
+                   else candidates[ttype])
             rendered[page.index] = page.render(nxt)
-    for idx in range(1, total_pages):
+        if spare_index is not None:
+            rendered[spare_index] = bytes(PAGE_SIZE)
+    for idx in range(1, total_real_pages):
         out += rendered[idx]
     return bytes(out)

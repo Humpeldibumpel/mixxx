@@ -264,6 +264,12 @@ def export(db_path, target, crate_ids, progress=print):
         P.T_LABELS: [P.row_simple_named(i, n) for n, i in labels.items()],
         P.T_PLAYLIST_TREE: playlist_rows,
         P.T_PLAYLIST_ENTRIES: entry_rows,
+        # The browse-menu vocabulary. A real export always carries these; a
+        # player that builds its categories from them sees nothing without.
+        P.T_COLUMNS: P.column_rows(),
+        P.T_UNKNOWN_17: P.menu_rows_17(),
+        P.T_UNKNOWN_18: P.menu_rows_18(),
+        P.T_COLORS: P.color_rows(),
     }
 
     pdb_dir = os.path.join(target, "PIONEER", "rekordbox")
