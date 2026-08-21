@@ -474,8 +474,11 @@ def build(tables):
     # --- file header page ---
     header = bytearray(PAGE_SIZE)
     struct.pack_into("<IIII", header, 0, 0, PAGE_SIZE, len(ALL_TABLES), next_unused)
-    struct.pack_into("<I", header, 16, 5)          # constant in every reference
-    struct.pack_into("<I", header, 20, seq + 1)   # above every page sequence
+    # Not a constant: a freshly written export has 1 here, an export that has
+    # been updated several times counts up (the reference stick reads 5).
+    struct.pack_into("<I", header, 16, 1)
+    # One above the highest page sequence, which is what `seq` already holds.
+    struct.pack_into("<I", header, 20, seq)
     struct.pack_into("<I", header, 24, 0)          # gap
     pos = 28
     for ttype in ALL_TABLES:
