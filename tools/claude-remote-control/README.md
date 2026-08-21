@@ -12,7 +12,7 @@ Auf dem Pi ausführen:
 ./setup-claude-remote.sh [PROJEKT_VERZEICHNIS] [SESSION_NAME]
 ```
 
-Voreinstellung: `~/kalender` und `Kalender Pi`.
+Voreinstellung: `~/stadtkalender` und `Kalender Pi`.
 
 Das Skript prüft Vorbedingungen (Login, Plan-Berechtigung, störende Umgebungs-
 variablen), setzt den Workspace-Trust für das Projektverzeichnis, legt Launcher

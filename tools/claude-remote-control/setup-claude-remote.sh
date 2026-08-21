@@ -3,8 +3,8 @@
 # Aufruf:  ./setup-claude-remote.sh [PROJEKT_VERZEICHNIS] [SESSION_NAME]
 set -euo pipefail
 
-PROJECT_DIR="${1:-$HOME/kalender}"
-SESSION_NAME="${2:-Kalender Pi}"
+PROJECT_DIR="${1:-$HOME/stadtkalender}"
+SESSION_NAME="${2:-Stadtkalender Pi}"
 SERVICE_NAME="claude-remote"
 UNIT_DIR="$HOME/.config/systemd/user"
 LAUNCHER="$HOME/.local/bin/claude-remote-launch"
@@ -16,6 +16,10 @@ die()  { printf '\033[1;31mXX\033[0m  %s\n' "$*" >&2; exit 1; }
 # ---------------------------------------------------------------- 1. Vorbedingungen
 say "Prüfe Vorbedingungen"
 
+if [ -e "$PROJECT_DIR" ] && [ ! -d "$PROJECT_DIR" ]; then
+  die "'$PROJECT_DIR' existiert, ist aber kein Verzeichnis (sondern $(file -b "$PROJECT_DIR" 2>/dev/null || echo Datei)).
+      Gib das echte Projektverzeichnis an, z.B.:  $0 ~/stadtkalender"
+fi
 [ -d "$PROJECT_DIR" ] || die "Projektverzeichnis '$PROJECT_DIR' existiert nicht."
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 
