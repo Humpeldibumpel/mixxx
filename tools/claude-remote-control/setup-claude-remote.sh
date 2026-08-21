@@ -20,9 +20,23 @@ say "Prüfe Vorbedingungen"
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 
 command -v claude >/dev/null 2>&1 || die "'claude' ist nicht im PATH. Erst Claude Code installieren."
+# Symlink NICHT aufloesen: bei npm-Installationen zeigt er auf eine cli.js tief in
+# node_modules, deren Verzeichnis kein 'node' enthaelt - der Service startet dann nicht.
 CLAUDE_BIN="$(command -v claude)"
-CLAUDE_BIN="$(readlink -f "$CLAUDE_BIN" 2>/dev/null || echo "$CLAUDE_BIN")"
+CLAUDE_DIR="$(cd "$(dirname "$CLAUDE_BIN")" && pwd)"
 say "claude: $CLAUDE_BIN ($(claude --version 2>/dev/null | head -1))"
+
+# PATH fuer die Unit: Verzeichnis von claude, dazu node (npm-Installationen brauchen es;
+# native Installationen sind eigenstaendig und haben evtl. gar kein node).
+SERVICE_PATH="$CLAUDE_DIR"
+if NODE_BIN="$(command -v node 2>/dev/null)"; then
+  NODE_DIR="$(cd "$(dirname "$NODE_BIN")" && pwd)"
+  [ "$NODE_DIR" = "$CLAUDE_DIR" ] || SERVICE_PATH="$SERVICE_PATH:$NODE_DIR"
+  say "node:   $NODE_BIN"
+else
+  warn "'node' nicht im PATH - ok bei nativer Installation, Fehler bei npm-Installation."
+fi
+SERVICE_PATH="$SERVICE_PATH:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
 
 command -v script  >/dev/null 2>&1 || die "'script' (util-linux) fehlt: sudo apt install bsdutils util-linux"
 command -v systemctl >/dev/null 2>&1 || die "systemd nicht gefunden - nutze stattdessen die tmux-Variante."
@@ -41,6 +55,12 @@ if ! "$CLAUDE_BIN" remote-control --help >/dev/null 2>&1; then
       (Pro/Max/Team/Enterprise nötig; API-Keys werden nicht unterstützt.)"
 fi
 say "Berechtigung ok"
+
+say "Teste Start mit dem PATH der Unit"
+env -i HOME="$HOME" PATH="$SERVICE_PATH" TERM=xterm-256color \
+    "$CLAUDE_BIN" --version >/dev/null 2>&1 \
+  || die "claude laeuft nicht mit PATH=$SERVICE_PATH - der Service wuerde ebenfalls scheitern."
+say "Start-Test ok"
 
 # ---------------------------------------------------------------- 3. Workspace-Trust vorab setzen
 say "Setze Workspace-Trust für $PROJECT_DIR"
@@ -88,7 +108,6 @@ chmod 755 "$LAUNCHER"
 # ---------------------------------------------------------------- 5. systemd-Unit
 say "Schreibe systemd-Unit $UNIT_DIR/$SERVICE_NAME.service"
 mkdir -p "$UNIT_DIR"
-NODE_BIN_DIR="$(dirname "$CLAUDE_BIN")"
 cat > "$UNIT_DIR/$SERVICE_NAME.service" <<UNIT_EOF
 [Unit]
 Description=Claude Code Remote Control ($SESSION_NAME)
@@ -98,7 +117,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$PROJECT_DIR
-Environment=PATH=$NODE_BIN_DIR:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=$SERVICE_PATH
 Environment=TERM=xterm-256color
 Environment=CLAUDE_REMOTE_CONTROL_SESSION_NAME_PREFIX=%H
 ExecStart=$LAUNCHER
