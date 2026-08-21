@@ -19,6 +19,7 @@ import sys
 import time
 
 from . import anlzwrite as A
+from . import devsetting as D
 from . import mixxxsrc as M
 from . import pdbwrite as P
 from . import waveform as W
@@ -276,6 +277,10 @@ def export(db_path, target, crate_ids, progress=print):
     os.makedirs(pdb_dir, exist_ok=True)
     with open(os.path.join(pdb_dir, "export.pdb"), "wb") as fh:
         fh.write(P.build(tables))
+
+    # A real export always carries this; whether a player needs it is unverified.
+    with open(os.path.join(target, "PIONEER", "DEVSETTING.DAT"), "wb") as fh:
+        fh.write(D.build())
 
     con.close()
     progress("\nFertig: %d Tracks, %d Playlists -> %s" %
