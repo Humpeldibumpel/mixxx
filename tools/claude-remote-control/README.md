@@ -9,8 +9,13 @@ gesteuert werden kann. Code, Dateisystem und Ausführung bleiben auf dem Pi.
 Auf dem Pi ausführen:
 
 ```bash
-./setup-claude-remote.sh [PROJEKT_VERZEICHNIS] [SESSION_NAME]
+./setup-claude-remote.sh [--at-boot-only] [PROJEKT_VERZEICHNIS] [SESSION_NAME]
 ```
+
+Mit `--at-boot-only` wird der Dienst nur aktiviert, aber nicht sofort gestartet. Das
+ist der richtige Weg, wenn im selben Verzeichnis bereits eine Claude-Sitzung laeuft:
+der Dienst kommt erst beim naechsten Neustart hoch, wenn diese ohnehin beendet ist,
+und es laufen nie zwei Instanzen gleichzeitig im selben Projekt.
 
 Voreinstellung: `~/stadtkalender` und `Kalender Pi`.
 

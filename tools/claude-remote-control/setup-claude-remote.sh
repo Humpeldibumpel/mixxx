@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 # Richtet Claude Code Remote Control auf dem Raspberry Pi als systemd-User-Service ein.
-# Aufruf:  ./setup-claude-remote.sh [PROJEKT_VERZEICHNIS] [SESSION_NAME]
+# Aufruf:  ./setup-claude-remote.sh [--at-boot-only] [PROJEKT_VERZEICHNIS] [SESSION_NAME]
+#
+#   --at-boot-only  Dienst nur aktivieren, nicht sofort starten. Nuetzlich, wenn im
+#                   selben Verzeichnis schon eine Claude-Sitzung laeuft: der Dienst
+#                   kommt dann erst beim naechsten Neustart hoch, wenn diese ohnehin
+#                   beendet ist, und es laufen nie zwei Instanzen gleichzeitig.
 set -euo pipefail
+
+START_NOW=1
+if [ "${1:-}" = "--at-boot-only" ]; then START_NOW=0; shift; fi
 
 PROJECT_DIR="${1:-$HOME/stadtkalender}"
 SESSION_NAME="${2:-Stadtkalender Pi}"
@@ -138,11 +146,22 @@ UNIT_EOF
 say "Aktiviere Linger (Service läuft ohne aktiven Login und nach Reboot)"
 loginctl enable-linger "$USER" 2>/dev/null || warn "enable-linger fehlgeschlagen - evtl. 'sudo loginctl enable-linger $USER' nötig."
 
-say "Starte Service"
 systemctl --user daemon-reload
-systemctl --user enable --now "$SERVICE_NAME.service"
+
+if [ "$START_NOW" = "0" ]; then
+  systemctl --user enable "$SERVICE_NAME.service"
+  printf '\n\033[1;32mFertig.\033[0m Der Dienst ist aktiviert, aber noch nicht gestartet.\n'
+  echo "Er kommt beim naechsten Neustart des Pi von selbst hoch."
+  echo
+  echo "Sofort starten, sobald keine andere Sitzung mehr im Projektverzeichnis laeuft:"
+  echo "    systemctl --user start $SERVICE_NAME && journalctl --user -u $SERVICE_NAME -f"
+else
+  say "Starte Service"
+  systemctl --user enable --now "$SERVICE_NAME.service"
+fi
 
 # ---------------------------------------------------------------- 7. Session-URL abwarten
+if [ "$START_NOW" = "1" ]; then
 say "Warte auf Session-URL (max. 90s)"
 URL=""
 for _ in $(seq 1 90); do
@@ -163,6 +182,7 @@ else
   warn "Keine URL im Log gefunden. Status prüfen mit:"
   echo "    systemctl --user status $SERVICE_NAME"
   echo "    journalctl --user -u $SERVICE_NAME -n 60 --no-pager"
+fi
 fi
 
 cat <<INFO
