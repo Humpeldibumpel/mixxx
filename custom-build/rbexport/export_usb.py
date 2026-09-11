@@ -68,10 +68,15 @@ def content_rel_path(track):
 def anlz_rel_dir(rb_id):
     """/PIONEER/USBANLZ/<P-group>/<8 hex>/ - one directory per track.
 
-    rekordbox derives these from an internal identifier; any stable unique pair
-    works as long as the track row's analyze_path agrees with where we write.
+    rekordbox's own values are not derivable from anything in the export, so the
+    player must read the track row's analyze_path rather than compute the
+    location - any unique pair works. Keep the numbers SMALL though: every
+    reference value sits below 0x40000, and the multiplicative hash we used
+    before (0x9E3779B1 for the first track) is negative as a signed 32-bit int.
+    A firmware that parses the folder name numerically would choke on that,
+    and an XDJ-RX2 did list our tracks but loaded no analysis for them.
     """
-    return "PIONEER/USBANLZ/P%03X/%08X" % (rb_id & 0xFFF, (rb_id * 2654435761) & 0xFFFFFFFF)
+    return "PIONEER/USBANLZ/P%03X/%08X" % (rb_id & 0xFFF, rb_id)
 
 
 # --- id assignment ----------------------------------------------------------

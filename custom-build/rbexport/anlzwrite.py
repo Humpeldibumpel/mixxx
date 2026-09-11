@@ -216,11 +216,15 @@ def build_file(sections):
 def tag_beat_grid_ext(beats):
     """PQT2 - the extended beat grid.
 
-    BEST EFFORT. The 56-byte header is reproduced exactly from the reference,
-    but the two bytes per beat in the body are undecoded; zeros are the right
-    size and the wrong content. Header word 8 is a per-track value whose
-    derivation is unknown (observed 0x01188414, 0x09452ed2, ...), so it stays 0
-    rather than being invented.
+    The 56-byte header is reproduced from the reference. The body carries one
+    u2 per beat: the sub-millisecond part of the beat time in microseconds
+    (0-999). PQTZ truncates each beat to whole milliseconds and this tag makes
+    up the difference - a reference at 90 BPM shows the tell-tale 833, 500,
+    166, 833 cycle of a 666.67 ms interval. Earlier we wrote zeros here, which
+    is the right size and the wrong content.
+
+    Header word 8 is a per-track value whose derivation is unknown (observed
+    0x01188414, 0x09452ed2, ...); it stays 0 rather than being invented.
     """
     if not beats:
         return b""
@@ -230,7 +234,9 @@ def tag_beat_grid_ext(beats):
     body += struct.pack(">II", int(first[2]),
                         (last[0] << 16) | int(round(last[1] * 100)))
     body += struct.pack(">IIIII", int(last[2]), len(beats), 0, 0, 0)
-    body += b"\x00\x00" * len(beats)
+    for _number, _bpm, ms in beats:
+        frac = int((ms - int(ms)) * 1000.0)
+        body += struct.pack(">H", max(0, min(999, frac)))
     return _section(b"PQT2", 56, body)
 
 
