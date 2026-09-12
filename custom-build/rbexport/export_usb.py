@@ -29,6 +29,18 @@ from . import waveform as W
 # --- layout -----------------------------------------------------------------
 
 _UNSAFE = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def _long(path):
+    """Lift Windows' 260-character path limit for a copy.
+
+    A stick root is short, but Contents/<Artist>/<Album>/<file> under a deep
+    target folder can exceed MAX_PATH, and CopyFile2 then fails with a
+    misleading "path not found".
+    """
+    if os.name == "nt" and len(path) > 240 and not path.startswith("\\\\?\\"):
+        return "\\\\?\\" + os.path.abspath(path)
+    return path
 PATH_LIMIT = 48          # the limit a real rekordbox export applies
 
 
@@ -217,7 +229,7 @@ def export(db_path, target, crate_ids, progress=print):
         dest = os.path.join(target, rel.replace("/", os.sep))
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         if not os.path.exists(dest) or os.path.getsize(dest) != t.filesize:
-            shutil.copy2(t.location, dest)
+            shutil.copy2(_long(t.location), _long(dest))
 
         device_path = "/" + rel
         # Reuse a folder the player or rekordbox already derived for this file;
