@@ -21,6 +21,7 @@ import time
 from . import anlzwrite as A
 from . import devsetting as D
 from . import mixxxsrc as M
+from .knownfolders import known_folders
 from . import pdbwrite as P
 from . import waveform as W
 
@@ -65,18 +66,31 @@ def content_rel_path(track):
     return "/".join(("Contents", artist, album, filename))
 
 
-def anlz_rel_dir(rb_id):
-    """/PIONEER/USBANLZ/<P-group>/<8 hex>/ - one directory per track.
+PEXT_BITS = (0, 2, 6, 7, 9, 13, 16)
+H_LIMIT = 200000
 
-    rekordbox's own values are not derivable from anything in the export, so the
-    player must read the track row's analyze_path rather than compute the
-    location - any unique pair works. Keep the numbers SMALL though: every
-    reference value sits below 0x40000, and the multiplicative hash we used
-    before (0x9E3779B1 for the first track) is negative as a signed 32-bit int.
-    A firmware that parses the folder name numerically would choke on that,
-    and an XDJ-RX2 did list our tracks but loaded no analysis for them.
+
+def pext(h):
+    """The P group is seven bits picked out of h - verified on every known pair."""
+    return sum(((h >> b) & 1) << i for i, b in enumerate(PEXT_BITS))
+
+
+def anlz_rel_dir(h):
+    """/PIONEER/USBANLZ/P<pext(h)>/<h as 8 hex>/ - one directory per track.
+
+    The player does NOT read the track row's analyze_path. It derives this
+    folder from the track by a function we have not cracked, looks only there,
+    and writes a stub if it finds nothing - which is exactly what an XDJ-RX2 did
+    with our export. So the folder name is load-bearing. What IS known: the P
+    group is a fixed bit selection of h, and every observed h lies below 200000.
+
+    Without the derivation the best we can do is reuse an h once it is known -
+    from a player's stub folder or from a rekordbox export of the same file (see
+    knownfolders.py). Otherwise h falls back to the track id, which at least
+    keeps the P/h relationship the firmware expects.
     """
-    return "PIONEER/USBANLZ/P%03X/%08X" % (rb_id & 0xFFF, rb_id)
+    assert 0 <= h < H_LIMIT, h
+    return "PIONEER/USBANLZ/P%03X/%08X" % (pext(h), h)
 
 
 # --- id assignment ----------------------------------------------------------
@@ -177,6 +191,14 @@ def export(db_path, target, crate_ids, progress=print):
             if tid not in track_ids:
                 track_ids.append(tid)
 
+    # Folder numbers already assigned by a player or by rekordbox: the target
+    # stick itself (stubs from a previous visit) plus any roots named in
+    # RBEXPORT_KNOWN_DIRS, semicolon separated.
+    roots = [target] + [r for r in os.environ.get("RBEXPORT_KNOWN_DIRS", "").split(";") if r]
+    known = known_folders(roots)
+    if known:
+        progress("%d bekannte ANLZ-Ordner werden wiederverwendet" % len(known))
+
     artists, albums, genres, keys, labels = (IdTable() for _ in range(5))
     track_rows, rb_ids, skipped = [], {}, []
     today = time.strftime("%Y-%m-%d")
@@ -197,11 +219,12 @@ def export(db_path, target, crate_ids, progress=print):
         if not os.path.exists(dest) or os.path.getsize(dest) != t.filesize:
             shutil.copy2(t.location, dest)
 
-        anlz_dir = anlz_rel_dir(rb_id)
+        device_path = "/" + rel
+        # Reuse a folder the player or rekordbox already derived for this file;
+        # the track id is only a fallback that keeps the P/h rule intact.
+        anlz_dir = anlz_rel_dir(known.get(device_path, rb_id))
         anlz_abs = os.path.join(target, anlz_dir.replace("/", os.sep))
         os.makedirs(anlz_abs, exist_ok=True)
-
-        device_path = "/" + rel
         beats = build_beat_grid(t)
         memory, hot, memory_ext, hot_ext = map_cues(t)
 
